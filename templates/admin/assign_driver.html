@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search drivers, vehicles..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-content">
+          <h1 style="font-size: 24px; margin-bottom: 4px;">Assign Driver</h1>
+          <p style="font-size: 13px; color: #6b7280;">Assign employees to specific vehicles in the fleet</p>
+        </div>
+      </div>
+
+      <div class="form-container-left">
+        <div class="form-card">
+          <form method="post" class="assignment-form" onsubmit="return handleAssignmentSubmit(this);">
+            {% csrf_token %}
+            
+            <div class="form-section">
+              <h3 class="section-title">Driver Assignment</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="{{ form.driver.id_for_label }}">Select Driver *</label>
+                  {{ form.driver }}
+                  {% if form.driver.errors %}
+                    <div class="field-error">{{ form.driver.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.vehicle.id_for_label }}">Select Vehicle *</label>
+                  {{ form.vehicle }}
+                  {% if form.vehicle.errors %}
+                    <div class="field-error">{{ form.vehicle.errors.0 }}</div>
+                  {% endif %}
+                  <!-- Small vehicle preview (populated via JS) -->
+                  <div id="vehicle-preview" class="vehicle-preview" style="display:none;">
+                    <img id="vehicle-preview-img" src="{% static 'img/placeholder-car.svg' %}" alt="vehicle" />
+                    <div class="vehicle-preview-info">
+                      <div id="vehicle-preview-reg" class="vehicle-reg">Reg: —</div>
+                      <div id="vehicle-preview-model" class="vehicle-model">Model</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.destination.id_for_label }}">Destination *</label>
+                  {{ form.destination }}
+                  {% if form.destination.errors %}
+                    <div class="field-error">{{ form.destination.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="{{ form.reason.id_for_label }}">Reason for Assignment *</label>
+                  {{ form.reason }}
+                  {% if form.reason.errors %}
+                    <div class="field-error">{{ form.reason.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <!-- Dedicated-driver option removed: admin assigns drivers only -->
+              </div>
+            </div>
+
+            <div class="form-actions-improved">
+              <button type="submit" class="btn-assign-driver">
+                <i class="fas fa-user-plus"></i>
+                Assign Driver
+              </button>
+              <a href="{% url 'fleet:admin_dashboard' %}" class="btn-cancel">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Handle assignment form submission with success animation
+function handleAssignmentSubmit(form) {
+  // Validate form has values
+  const driver = form.querySelector('#id_driver');
+  const vehicle = form.querySelector('#id_vehicle');
+  const destination = form.querySelector('#id_destination');
+  const reason = form.querySelector('#id_reason');
+  
+  if (!driver.value || !vehicle.value || !destination.value || !reason.value) {
+    return true; // Let form submit normally to show validation errors
+  }
+  
+  // Hide page loader if showing
+  if (typeof hideLoader === 'function') {
+    hideLoader();
+  }
+  
+  // Show success animation
+  showSuccessModal('Driver Assigned Successfully!');
+  
+  // Submit form after animation
+  setTimeout(function() {
+    hideSuccessModal();
+    form.submit();
+  }, 4000);
+  
+  return false; // Prevent default submission
+}
+
+// Vehicle preview logic: fetch details when the vehicle select changes
+document.addEventListener('DOMContentLoaded', function () {
+  const vehicleSelect = document.getElementById('id_vehicle');
+  const preview = document.getElementById('vehicle-preview');
+  const img = document.getElementById('vehicle-preview-img');
+  const regDiv = document.getElementById('vehicle-preview-reg');
+  const modelDiv = document.getElementById('vehicle-preview-model');
+
+  function stripYear(text) {
+    // remove trailing 4-digit year like '2020' or '(2020)'
+    if (!text) return text;
+    return text.replace(/\s*\(?(19|20)\d{2}\)?/g, '').trim();
+  }
+
+  async function loadVehicle(id) {
+    if (!id) {
+      preview.style.display = 'none';
+      return;
+    }
+    try {
+      const res = await fetch(`/fleet-admin/vehicles/details/${id}/`);
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      img.src = data.image_url || img.src;
+      img.onerror = () => { img.src = "{% static 'img/placeholder-car.svg' %}"; };
+      regDiv.textContent = `Reg: ${data.reg_number || '—'}`;
+      modelDiv.textContent = stripYear(data.model || data.vehicle_type || 'Unknown');
+      preview.style.display = 'flex';
+    } catch (e) {
+      preview.style.display = 'none';
+    }
+  }
+
+  if (vehicleSelect) {
+    // initial load if a value exists
+    if (vehicleSelect.value) loadVehicle(vehicleSelect.value);
+    vehicleSelect.addEventListener('change', function () {
+      loadVehicle(this.value);
+    });
+  }
+});
+</script>
+
+<style>
+/* Compact styles for assign driver page to match admin dashboard compactness */
+.page-header { margin-bottom: 16px; }
+.form-card { max-width: 820px; padding: 20px; }
+.section-title { font-size: 16px; margin-bottom: 16px; }
+.form-grid { gap: 16px; }
+.form-grid .form-group label { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-grid .form-group input.form-control, .form-grid .form-group select.form-control, .form-grid .form-group textarea.form-control { font-size: 13px; padding: 8px 10px; }
+.btn-assign-driver { padding: 9px 18px; font-size: 14px; }
+.btn-cancel { font-size: 13px; }
+.vehicle-preview { display:flex; align-items:center; gap:10px; margin-top:8px; background:#f9fafb; border:1px solid #e5e7eb; padding:6px 8px; border-radius:6px; max-width:280px; }
+.vehicle-preview img { width:72px; height:48px; object-fit:cover; border-radius:4px; background:#f3f4f6; }
+.vehicle-preview .vehicle-reg { font-weight:700; font-size:13px; color:#0f172a; }
+.vehicle-preview .vehicle-model { font-size:12px; color:#475569; }
+</style>
+{% endblock %}

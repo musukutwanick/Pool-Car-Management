@@ -1,0 +1,548 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search requests..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:supervisor_pending_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-check-circle"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+            {% if pending_approval_count > 0 %}
+            <span class="badge-count">{{ pending_approval_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_available_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car"></i></span>
+            <span class="nav-text">Available Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_request_vehicle' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus"></i></span>
+            <span class="nav-text">Request Vehicle</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_my_requests' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">My Requests</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1 style="font-size: 24px; margin-bottom: 4px;">Pending Approvals</h1>
+        <p style="font-size: 13px; color: #6b7280;">Review and approve vehicle requests from your team</p>
+      </div>
+
+      {% if pending_requests %}
+      <div class="table-container">
+        <table class="requests-table">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Requester</th>
+              <th>Purpose</th>
+              <th>Destination</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Details</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for car_request in pending_requests %}
+            <tr>
+              <td><strong>#{{ car_request.request_code }}</strong></td>
+              <td>{{ car_request.requester.get_full_name|default:car_request.requester.username }}</td>
+              <td>{{ car_request.purpose|truncatewords:10 }}</td>
+              <td>{{ car_request.location }}</td>
+              <td>{{ car_request.start_time|date:"M d, Y" }}</td>
+              <td>{{ car_request.start_time|date:"h:i A" }}</td>
+              <td>
+                {% if car_request.out_of_town %}
+                <span class="badge badge-warning">
+                  <i class="fas fa-road"></i> Out of Town
+                </span>
+                {% endif %}
+                {% if car_request.needs_driver %}
+                <span class="badge badge-info">
+                  <i class="fas fa-user-tie"></i> Driver Required
+                </span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="request-status status-pending">Awaiting Approval</span>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <form method="post" action="{% url 'fleet:supervisor_approve_request' car_request.id %}" style="display: contents;" onsubmit="return handleApprovalSubmit(this, 'Approve this request?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-approve">
+                      <i class="fas fa-check"></i> Approve
+                    </button>
+                  </form>
+
+                  <button type="button" class="btn-reject" onclick="openRejectModal({{ car_request.id }}, '{{ car_request.request_code }}')">
+                    <i class="fas fa-times"></i> Reject
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <h3>No Pending Approvals</h3>
+        <p>You don't have any requests awaiting your approval at this time.</p>
+      </div>
+      {% endif %}
+
+      <!-- Rejection Modal -->
+      <div id="rejectModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>Reject Request</h2>
+            <button type="button" class="close-btn" onclick="closeRejectModal()">&times;</button>
+          </div>
+          <form id="rejectForm" method="post" action="">
+            {% csrf_token %}
+            <div class="modal-body">
+              <p>You are about to reject request <strong id="modalRequestCode"></strong></p>
+              <div class="form-group">
+                <label for="rejection_reason">Reason for Rejection<span style="color: red;">*</span></label>
+                <textarea 
+                  id="rejection_reason" 
+                  name="rejection_reason" 
+                  rows="4" 
+                  class="form-control" 
+                  placeholder="Please provide a reason for rejecting this request..."
+                  required
+                ></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" onclick="closeRejectModal()">Cancel</button>
+              <button type="submit" class="btn-reject-confirm">
+                <i class="fas fa-times"></i> Reject Request
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<style>
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-top: 24px;
+}
+
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.requests-table thead {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.requests-table th {
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.requests-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.requests-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.requests-table td {
+  padding: 12px 10px;
+  font-size: 14px;
+  color: #111827;
+  vertical-align: middle;
+}
+
+.requests-table td:last-child {
+  padding: 12px 8px;
+}
+
+.request-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 6px;
+  margin-bottom: 4px;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.btn-approve, .btn-reject {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+  min-width: 110px;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.2s;
+}
+
+.modal-content {
+  background-color: white;
+  margin: 10% auto;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { 
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.form-group {
+  margin-top: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #fed41f;
+  box-shadow: 0 0 0 3px rgba(254, 212, 31, 0.1);
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
+}
+
+.btn-reject-confirm {
+  padding: 10px 20px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-reject-confirm:hover {
+  background: #dc2626;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.empty-state i {
+  font-size: 64px;
+  color: #d1d5db;
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  color: #111827;
+  margin-bottom: 8px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  if (!dropdown.contains(event.target)) {
+    document.getElementById('profileMenu').style.display = 'none';
+  }
+});
+
+function handleApprovalSubmit(form, message) {
+  if (confirm(message)) {
+    // Disable the button to prevent double submission
+    const button = form.querySelector('button');
+    button.disabled = true;
+    
+    // Hide page loader if it's showing
+    if (typeof hideLoader === 'function') {
+      hideLoader();
+    }
+    
+    // Show success animation
+    showSuccessModal('Request Approved Successfully!');
+    
+    // Submit form after animation completes (3 seconds to see animation)
+    setTimeout(function() {
+      hideSuccessModal();
+      form.submit();
+    }, 4000);
+    
+    return false; // Prevent default submission, we'll submit manually
+  }
+  return false; // Cancel form submission
+}
+
+// Modal functions
+function openRejectModal(requestId, requestCode) {
+  const modal = document.getElementById('rejectModal');
+  const form = document.getElementById('rejectForm');
+  const codeElement = document.getElementById('modalRequestCode');
+  
+  // Set the form action URL
+  form.action = "{% url 'fleet:supervisor_reject_request' 0 %}".replace('/0/', '/' + requestId + '/');
+  
+  // Set the request code in the modal
+  codeElement.textContent = '#' + requestCode;
+  
+  // Clear previous input
+  document.getElementById('rejection_reason').value = '';
+  
+  // Show modal
+  modal.style.display = 'block';
+}
+
+function closeRejectModal() {
+  const modal = document.getElementById('rejectModal');
+  modal.style.display = 'none';
+}
+
+// Close modal when clicking outside of it
+window.onclick = function(event) {
+  const modal = document.getElementById('rejectModal');
+  if (event.target === modal) {
+    closeRejectModal();
+  }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeRejectModal();
+  }
+});
+</script>
+
+{% endblock %}

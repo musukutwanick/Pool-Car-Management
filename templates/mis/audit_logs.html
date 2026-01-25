@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Header and Sidebar -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search..." class="search-input">
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="{% url 'fleet:mis_dashboard' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-home"></i></span><span class="nav-text">Home</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_manage_users' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-users"></i></span><span class="nav-text">Manage Users</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_manage_drivers' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-id-card"></i></span><span class="nav-text">Manage Drivers</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_reset_password' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-key"></i></span><span class="nav-text">Reset Passwords</span></a></li>
+        <li class="nav-item active"><a href="{% url 'fleet:mis_audit_logs' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-clipboard-list"></i></span><span class="nav-text">Audit Logs</span></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>System Audit Logs</h1>
+          <p>Complete record of user activities and system events</p>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon users">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Total User Logins Recorded</div>
+            <div class="stat-value">{{ total_users }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon requests">
+            <i class="fas fa-car"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Total Requests Logged</div>
+            <div class="stat-value">{{ total_requests }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Logs Tabs -->
+      <div class="audit-container">
+        <div class="tabs-header">
+          <button class="tab-button active" onclick="switchTab('logins')">
+            <i class="fas fa-sign-in-alt"></i> User Logins
+          </button>
+          <button class="tab-button" onclick="switchTab('requests')">
+            <i class="fas fa-car"></i> Vehicle Requests
+          </button>
+        </div>
+
+        <!-- User Logins Tab -->
+        <div id="logins-tab" class="tab-content active">
+          <div class="logs-wrapper">
+            {% if all_users %}
+              <div class="audit-logs">
+                {% for user in all_users %}
+                  <div class="log-item" data-timestamp="{{ user.last_login|date:'U' }}">
+                    <div class="log-icon login">
+                      <i class="fas fa-sign-in-alt"></i>
+                    </div>
+                    <div class="log-details">
+                      <div class="log-text">{{ user.get_full_name|default:user.username }}</div>
+                      <div class="log-meta">
+                        <span class="log-role">{{ user.profile.role|default:"User" }}</span>
+                        <span class="log-time">{{ user.last_login|default:"Never logged in"|date:"M d, Y H:i" }}</span>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No user login activity recorded</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Vehicle Requests Tab -->
+        <div id="requests-tab" class="tab-content">
+          <div class="logs-wrapper">
+            {% if all_requests %}
+              <div class="audit-logs">
+                {% for req in all_requests %}
+                  <div class="log-item" data-timestamp="{{ req.created_at|date:'U' }}">
+                    <div class="log-icon request">
+                      <i class="fas fa-car"></i>
+                    </div>
+                    <div class="log-details">
+                      <div class="log-text">
+                        <strong>{{ req.requester.get_full_name|default:req.requester.username }}</strong> requested a vehicle
+                      </div>
+                      <div class="log-meta">
+                        <span class="log-status" style="background: {% if req.approved_by %}#d1fae5{% elif req.rejected_by %}#fee2e2{% else %}#fef3c7{% endif %}; color: {% if req.approved_by %}#065f46{% elif req.rejected_by %}#991b1b{% else %}#92400e{% endif %};">
+                          {% if req.approved_by %}Approved{% elif req.rejected_by %}Rejected{% else %}Pending{% endif %}
+                        </span>
+                        <span class="log-time">{{ req.created_at|date:"M d, Y H:i" }}</span>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No vehicle requests recorded</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header-left h1 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.page-header-left p {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: #fed41f;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #111827;
+  flex-shrink: 0;
+}
+
+.stat-icon.users {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.stat-icon.requests {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Audit Container */
+.audit-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.tabs-header {
+  display: flex;
+  border-bottom: 2px solid #f3f4f6;
+  background: #fafbfc;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 18px 24px;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-bottom: 3px solid transparent;
+}
+
+.tab-button:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.tab-button.active {
+  color: #111827;
+  border-bottom-color: #fed41f;
+  background: white;
+}
+
+.tab-button i {
+  color: inherit;
+}
+
+.tab-content {
+  display: none;
+  padding: 24px;
+  min-height: 400px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.logs-wrapper {
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+.logs-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logs-wrapper::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.logs-wrapper::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.logs-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.audit-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.log-item:hover {
+  background: white;
+  border-color: #fed41f;
+  box-shadow: 0 2px 8px rgba(254, 212, 31, 0.1);
+}
+
+.log-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #111827;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.log-icon.login {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+}
+
+.log-icon.request {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+}
+
+.log-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-text {
+  font-weight: 600;
+  color: #111827;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.log-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.log-role {
+  font-size: 12px;
+  background: linear-gradient(135deg, #fed41f, #fcd34d);
+  color: #111827;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.log-status {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.log-time {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #d1d5db;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin: 0;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && !dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Tab switching functionality
+function switchTab(tabName) {
+  // Hide all tabs
+  const tabs = document.querySelectorAll('.tab-content');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  
+  // Remove active class from all buttons
+  const buttons = document.querySelectorAll('.tab-button');
+  buttons.forEach(button => button.classList.remove('active'));
+  
+  // Show selected tab
+  document.getElementById(tabName + '-tab').classList.add('active');
+  
+  // Mark button as active
+  event.target.closest('.tab-button').classList.add('active');
+}
+</script>
+{% endblock %}

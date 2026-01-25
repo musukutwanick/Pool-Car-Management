@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search vehicles" class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        
+        {% if is_manager %}
+        <li class="nav-item">
+          <a href="{% url 'fleet:supervisor_pending_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-check-circle"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+            {% if pending_approval_count > 0 %}
+            <span class="badge-count">{{ pending_approval_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        {% endif %}
+        
+        <li class="nav-item active">
+          <a href="{% url 'fleet:employee_available_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car"></i></span>
+            <span class="nav-text">Available Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_request_vehicle' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus"></i></span>
+            <span class="nav-text">Request Vehicle</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_my_requests' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">My Requests</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1 style="font-size: 24px; margin-bottom: 4px;">Available Vehicles</h1>
+        <p style="font-size: 13px; color: #6b7280;">Browse and request pool cars available for booking</p>
+      </div>
+
+      <!-- Available Vehicles Table -->
+      <div class="vehicles-section">
+        {% if vehicles %}
+          <div class="vehicles-table-container">
+            <table class="vehicles-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Vehicle</th>
+                  <th>Registration</th>
+                  <th>Type</th>
+                  <th>Fuel Type</th>
+                  <th>Mileage</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for vehicle in vehicles %}
+                  <tr class="vehicle-row">
+                    <td>
+                      <div class="vehicle-thumbnail">
+                        {% if vehicle.image %}
+                          <img src="{{ vehicle.image.url }}" alt="{{ vehicle.reg_number }}" onerror="this.src='{% static 'img/placeholder-car.svg' %}'">
+                        {% else %}
+                          <img src="{% static 'img/placeholder-car.svg' %}" alt="No image">
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>
+                      <strong style="color: #111827; font-size: 14px;">{{ vehicle.model|default:vehicle.vehicle_type }}</strong>
+                    </td>
+                    <td>
+                      <strong style="color: #111827;">{{ vehicle.reg_number }}</strong>
+                    </td>
+                    <td>
+                      <span style="color: #374151; font-size: 13px;">{{ vehicle.vehicle_type|default:"—" }}</span>
+                    </td>
+                    <td>
+                      <span class="text-with-icon">
+                        <i class="fas fa-gas-pump"></i>
+                        {{ vehicle.fuel_type|title|default:"Not specified" }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="text-with-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                        {{ vehicle.current_mileage|floatformat:0|default:"0" }} km
+                      </span>
+                    </td>
+                    <td>
+                      <span class="status-pill available">Available</span>
+                    </td>
+                    <td>
+                      <a href="{% url 'fleet:employee_request_vehicle' %}?vehicle={{ vehicle.id }}" class="btn-request">
+                        <i class="fas fa-plus-circle"></i> Request
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <i class="fas fa-car-side fa-3x"></i>
+            <h3>No Vehicles Available</h3>
+            <p>All vehicles are currently assigned. Please check back later.</p>
+          </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.page-header { margin-bottom: 16px; }
+
+.vehicles-section {
+  margin-top: 16px;
+}
+
+/* Vehicles Table */
+.vehicles-table-container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.vehicles-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vehicles-table thead {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.vehicles-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vehicles-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.2s;
+}
+
+.vehicles-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.vehicles-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.vehicle-thumbnail {
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.vehicle-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.text-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.text-with-icon i {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.status-pill.available {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.btn-request {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fed41f;
+  color: #000000;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.btn-request:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.btn-request i {
+  font-size: 14px;
+}
+
+.vehicle-info p strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.empty-state i {
+  margin-bottom: 16px;
+  color: #9ca3af;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: #9ca3af;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

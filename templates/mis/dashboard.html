@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search users, drivers..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item active">
+          <a href="{% url 'fleet:mis_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_manage_users' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-users"></i></span>
+            <span class="nav-text">Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_manage_drivers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+            <span class="nav-text">Manage Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_reset_password' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-key"></i></span>
+            <span class="nav-text">Reset Passwords</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_audit_logs' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Audit Logs</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>Welcome Back, {{ user_name }}!</h1>
+        <p>System user management and configuration</p>
+      </div>
+
+      <!-- Key Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon users">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ user_stats.total_users|default:0 }}</h3>
+            <p>Total Users</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon employees">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ user_stats.employees|default:0 }}</h3>
+            <p>Employees</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon drivers">
+            <i class="fas fa-id-card"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ user_stats.drivers|default:0 }}</h3>
+            <p>Drivers</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon admins">
+            <i class="fas fa-user-shield"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ user_stats.admins|default:0 }}</h3>
+            <p>Administrators</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Access removed per request -->
+
+      <!-- System Overview -->
+      <div class="dashboard-grid">
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h3><i class="fas fa-chart-bar" style="color: #fed41f; margin-right: 8px;"></i> System Statistics</h3>
+          </div>
+          <div class="card-content">
+            <div class="system-stats">
+              <div class="stat-row">
+                <span class="stat-label"><i class="fas fa-clipboard-list"></i> Total Requests:</span>
+                <span class="stat-value">{{ system_stats.total_requests|default:0 }}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label"><i class="fas fa-clock"></i> Pending Requests:</span>
+                <span class="stat-value">{{ system_stats.pending_requests|default:0 }}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label"><i class="fas fa-car-side"></i> Active Assignments:</span>
+                <span class="stat-value">{{ system_stats.active_assignments|default:0 }}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label"><i class="fas fa-car"></i> Total Vehicles:</span>
+                <span class="stat-value">{{ system_stats.total_vehicles|default:0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Users removed per request -->
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.page-header p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.15);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #111827; /* icons black */
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.stat-icon.users { background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+.stat-icon.employees { background: linear-gradient(135deg, #ecfdf5, #d1fae5); }
+.stat-icon.drivers { background: linear-gradient(135deg, #fff7ed, #fed7aa); }
+.stat-icon.admins { background: linear-gradient(135deg, #fef2f2, #fee2e2); }
+
+.stat-content h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #111827;
+  line-height: 1;
+}
+
+.stat-content p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.section-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 20px 0;
+}
+
+.quick-actions-section {
+  margin-bottom: 32px;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* make system stats wider / full width */
+  gap: 24px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.15);
+}
+
+.card-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.12);
+}
+
+.card-header h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.card-header i { color: #111827 !important; margin-right: 8px; }
+
+.recent-users {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.user-item:hover {
+  background: #f9fafb;
+}
+
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f9fafb, #eef2ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #111827;
+  font-size: 16px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.user-details {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.user-role {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.user-date {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.empty-text {
+  color: #9ca3af;
+  text-align: center;
+  padding: 24px;
+  font-style: italic;
+}
+
+.system-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label i {
+  font-size: 16px;
+  color: #111827;
+}
+
+.nav-icon i { color: #111827; }
+
+.stat-value {
+  font-weight: 700;
+  color: #111827;
+  font-size: 18px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

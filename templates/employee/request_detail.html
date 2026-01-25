@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Request #{{ car_request.request_code }}</h1>
+  <p>Requested by: {{ car_request.requester.get_full_name|default:car_request.requester.username }}</p>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="request-details">
+      <p><strong>Purpose:</strong> {{ car_request.purpose }}</p>
+      <p><strong>Destination:</strong> {{ car_request.location }}</p>
+      <p><strong>Start:</strong> {{ car_request.start_time|date:"Y-m-d H:i" }}</p>
+      <p><strong>End:</strong> {{ car_request.end_time|date:"Y-m-d H:i" }}</p>
+      <p><strong>Out of Town:</strong> {% if car_request.out_of_town %}Yes{% else %}No{% endif %}</p>
+      <p><strong>Needs Driver:</strong> {% if car_request.needs_driver %}Yes{% else %}No{% endif %}</p>
+      <p><strong>Subsidiary:</strong> {{ car_request.get_subsidiary_display }}</p>
+      <p><strong>Status:</strong> {{ car_request.status|capfirst }}</p>
+      <p><strong>Assigned Vehicle:</strong>
+        {% if car_request.assigned_vehicle %}
+          {{ car_request.assigned_vehicle.reg_number }} — {{ car_request.assigned_vehicle.model }}
+        {% else %}
+          Not assigned
+        {% endif %}
+      </p>
+      <p><strong>Approvals:</strong>
+        <ul>
+          <li>GM: {% if car_request.approver1 %}Assigned{% else %}Pending{% endif %}</li>
+          <li>CEO: {% if car_request.approver2 %}Assigned{% else %}Pending{% endif %}</li>
+        </ul>
+      </p>
+      <p><strong>Submitted:</strong> {{ car_request.created_at|date:"Y-m-d H:i" }}</p>
+    </div>
+
+    <div class="form-actions">
+      <a href="{% url 'fleet:employee_my_requests' %}" class="btn">Back</a>
+      {% if can_modify %}
+        <a href="{% url 'fleet:employee_edit_request' car_request.id %}" class="btn btn-secondary">Edit</a>
+        <form method="post" action="{% url 'fleet:employee_cancel_request' car_request.id %}" style="display:inline-block">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this request?');">Cancel Request</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

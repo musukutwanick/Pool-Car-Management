@@ -1,0 +1,531 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search requests" class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        
+        {% if is_manager %}
+        <li class="nav-item">
+          <a href="{% url 'fleet:supervisor_pending_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-check-circle"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+            {% if pending_approval_count > 0 %}
+            <span class="badge-count">{{ pending_approval_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        {% endif %}
+        
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_available_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car"></i></span>
+            <span class="nav-text">Available Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_request_vehicle' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus"></i></span>
+            <span class="nav-text">Request Vehicle</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:employee_my_requests' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">My Requests</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>My Vehicle Requests</h1>
+        <p>Track the status of your vehicle booking requests</p>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="requests-section">
+        {% if requests %}
+          <div class="table-container">
+            <table class="requests-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Purpose</th>
+                  <th>Start Date</th>
+                  <th>Destination</th>
+                  {% if employee_type == 'MANAGER' %}
+                    <th>CEO Approval</th>
+                  {% else %}
+                    <th>Supervisor Approval</th>
+                    <th>GM Approval</th>
+                  {% endif %}
+                  <th>Vehicle Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in requests %}
+                  <tr data-request-id="{{ req.id }}"
+                      data-request-code="{{ req.request_code }}"
+                      data-purpose="{{ req.purpose|escape }}"
+                      data-start="{{ req.start_time|date:'M d, Y H:i' }}"
+                      data-destination="{{ req.location|escape }}"
+                      data-outoftown="{{ req.out_of_town }}"
+                      data-needsdriver="{{ req.needs_driver }}"
+                      data-status="{{ req.status }}"
+                      data-vehicle="{% if req.assigned_vehicle %}{{ req.assigned_vehicle.reg_number }}{% endif %}"
+                      data-approver1="{% if req.approver1 %}true{% else %}false{% endif %}"
+                      data-approver2="{% if req.approver2 %}true{% else %}false{% endif %}">
+                    <td><strong>#{{ req.request_code }}</strong></td>
+                    <td>{{ req.purpose|truncatechars:40 }}</td>
+                    <td>{{ req.start_time|date:"M d, Y" }}</td>
+                    <td>{{ req.location|truncatechars:30 }}</td>
+                    
+                    {% if employee_type == 'MANAGER' %}
+                      <!-- Manager: Show only CEO Approval -->
+                      <td>
+                        {% if req.ceo_approved_by %}
+                          <span class="status-text">Approved</span>
+                        {% else %}
+                          <span class="status-text">Pending</span>
+                        {% endif %}
+                      </td>
+                    {% else %}
+                      <!-- General Employee: Show Supervisor and GM Approval -->
+                      <td>
+                        {% if req.supervisor_approved_by %}
+                          <span class="status-text">Approved</span>
+                        {% else %}
+                          <span class="status-text">Pending</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if req.gm_approved_by %}
+                          <span class="status-text">Approved</span>
+                        {% else %}
+                          <span class="status-text">Pending</span>
+                        {% endif %}
+                      </td>
+                    {% endif %}
+                    
+                    <td>
+                      {% if req.status == 'assigned' %}
+                        <span class="status-text">Assigned - {{ req.assigned_vehicle.reg_number }}</span>
+                      {% elif req.status == 'completed' %}
+                        <span class="status-text">Completed</span>
+                      {% elif req.status == 'cancelled' %}
+                        <span class="status-text">Cancelled</span>
+                      {% elif req.status == 'rejected' %}
+                        <span class="status-text">Rejected</span>
+                      {% elif req.status == 'pending' %}
+                        {% if employee_type == 'MANAGER' %}
+                          {% if req.ceo_approved_by %}
+                            <span class="status-text">Approved - Awaiting Vehicle Assignment</span>
+                          {% else %}
+                            <span class="status-text">Requested - Awaiting CEO Approval</span>
+                          {% endif %}
+                        {% else %}
+                          {% if req.supervisor_approved_by and req.gm_approved_by %}
+                            <span class="status-text">Approved - Awaiting Vehicle Assignment</span>
+                          {% elif req.supervisor_approved_by %}
+                            <span class="status-text">Supervisor Approved - Awaiting GM Approval</span>
+                          {% else %}
+                            <span class="status-text">Requested - Awaiting Supervisor Approval</span>
+                          {% endif %}
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="action-buttons">
+                        <button type="button" class="action-link" onclick="openRequestModal(this)" aria-label="View request details">View</button>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <i class="fas fa-clipboard-list fa-4x"></i>
+            <h3>No Requests Found</h3>
+            <p>You haven't made any vehicle requests yet.</p>
+            <a href="{% url 'fleet:employee_request_vehicle' %}" class="btn-primary">Request a Vehicle</a>
+          </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.requests-section {
+  margin-top: 20px;
+}
+
+.table-container {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.requests-table thead {
+  background: #f9fafb;
+}
+
+.requests-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.requests-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.requests-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Plain text status (removed pill backgrounds) */
+.status-text {
+  display: inline;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.action-link {
+  color: #fed41f;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  transition: background 0.2s;
+}
+
+.action-link:hover {
+  background: rgba(254, 212, 31, 0.1);
+}
+
+.action-link.edit {
+  color: #3b82f6;
+}
+
+.action-link.edit:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.action-link.cancel {
+  color: #ef4444;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.action-link.cancel:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+  min-height: 360px;
+  max-width: 900px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.empty-state i {
+  font-size: 64px;
+  color: #e6e7eb;
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  font-size: 28px;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 28px;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fed41f;
+  color: #000000;
+  padding: 14px 28px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(250, 184, 0, 0.16);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(250, 184, 0, 0.22);
+}
+
+.btn-primary:focus {
+  outline: 3px solid rgba(254, 212, 31, 0.15);
+  outline-offset: 2px;
+}
+</style>
+
+<!-- Request Detail Modal -->
+<div id="requestModal" class="req-modal" aria-hidden="true">
+  <div class="req-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reqModalTitle">
+    <div class="req-modal-header">
+      <h2 id="reqModalTitle">Request <span id="modalReqCode"></span></h2>
+      <button class="req-close" onclick="closeRequestModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="req-modal-body">
+      <div class="req-details-grid">
+        <div class="req-field"><span class="req-label">Purpose:</span><span id="modalPurpose" class="req-value"></span></div>
+        <div class="req-field"><span class="req-label">Start Time:</span><span id="modalStart" class="req-value"></span></div>
+        <div class="req-field"><span class="req-label">Destination:</span><span id="modalDestination" class="req-value"></span></div>
+        <div class="req-field"><span class="req-label">Out of Town:</span><span id="modalOutOfTown" class="req-value"></span></div>
+        <div class="req-field"><span class="req-label">Needs Driver:</span><span id="modalNeedsDriver" class="req-value"></span></div>
+        <div class="req-field"><span class="req-label">GM Approval:</span><span id="modalGM" class="req-value"></span></div>
+        <div class="req-field"><span class="req-label">CEO Approval:</span><span id="modalCEO" class="req-value"></span></div>
+        <div class="req-field full"><span class="req-label">Current Status:</span><span id="modalStatus" class="req-value status-text"></span></div>
+        <div class="req-field full" id="modalVehicleRow" style="display:none;"><span class="req-label">Assigned Vehicle:</span><span id="modalVehicle" class="req-value"></span></div>
+      </div>
+    </div>
+    <div class="req-modal-footer" id="modalActions">
+      <!-- Dynamic buttons inserted here -->
+      <button class="req-secondary" type="button" onclick="closeRequestModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.req-modal { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1200; }
+.req-modal-dialog { background:#ffffff; width:640px; max-width:92%; border-radius:16px; box-shadow:0 8px 32px rgba(15,23,42,0.25); overflow:hidden; display:flex; flex-direction:column; }
+.req-modal-header { padding:20px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; }
+.req-modal-header h2 { margin:0; font-size:20px; font-weight:700; color:#111827; }
+.req-close { background:transparent; border:none; font-size:26px; cursor:pointer; line-height:1; color:#475569; }
+.req-close:hover { color:#111827; }
+.req-modal-body { padding:24px 28px 8px; }
+.req-details-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px 22px; }
+.req-field { display:flex; flex-direction:column; gap:4px; }
+.req-field.full { grid-column:1 / -1; }
+.req-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:#64748b; }
+.req-value { font-size:14px; font-weight:600; color:#0f172a; }
+.req-modal-footer { padding:16px 24px 24px; display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-end; border-top:1px solid #f1f5f9; }
+.req-primary, .req-secondary, .req-danger, .req-edit { border:none; cursor:pointer; font-weight:600; font-size:13px; padding:10px 18px; border-radius:10px; display:inline-flex; align-items:center; gap:6px; transition:background .18s, box-shadow .18s; }
+.req-primary { background:#fed41f; color:#000; }
+.req-primary:hover { background:#fed41f; opacity:0.95; }
+.req-secondary { background:#e2e8f0; color:#1e293b; }
+.req-secondary:hover { background:#cbd5e1; }
+.req-edit { background:#3b82f6; color:#ffffff; }
+.req-edit:hover { background:#2563eb; }
+.req-danger { background:#ef4444; color:#ffffff; }
+.req-danger:hover { background:#dc2626; }
+.req-primary:focus, .req-secondary:focus, .req-edit:focus, .req-danger:focus { outline:3px solid rgba(251,191,36,0.35); outline-offset:2px; }
+@media (max-width:640px){ .req-details-grid { grid-template-columns:1fr; } .req-modal-dialog { width:94%; } }
+</style>
+
+<script>
+function openRequestModal(btn){
+  const row = btn.closest('tr');
+  if(!row) return;
+  const modal = document.getElementById('requestModal');
+  if(!modal) return;
+  // Populate fields
+  const get = attr => row.getAttribute(attr) || '';
+  document.getElementById('modalReqCode').textContent = '#' + get('data-request-code');
+  document.getElementById('modalPurpose').textContent = get('data-purpose');
+  document.getElementById('modalStart').textContent = get('data-start');
+  document.getElementById('modalDestination').textContent = get('data-destination');
+  document.getElementById('modalOutOfTown').textContent = get('data-outoftown') === 'True' ? 'Yes' : 'No';
+  document.getElementById('modalNeedsDriver').textContent = get('data-needsdriver') === 'True' ? 'Yes' : 'No';
+  document.getElementById('modalGM').textContent = get('data-approver1') === 'true' ? 'Approved' : (get('data-outoftown') === 'True' ? 'Pending' : 'N/A');
+  document.getElementById('modalCEO').textContent = get('data-approver2') === 'true' ? 'Approved' : (get('data-outoftown') === 'True' ? 'Pending' : 'N/A');
+  const statusRaw = get('data-status');
+  let statusDisplay = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
+  if(statusRaw === 'assigned'){ statusDisplay = 'Assigned - ' + get('data-vehicle'); }
+  document.getElementById('modalStatus').textContent = statusDisplay;
+  const vehicle = get('data-vehicle');
+  const vehicleRow = document.getElementById('modalVehicleRow');
+  if(vehicle){ vehicleRow.style.display='flex'; document.getElementById('modalVehicle').textContent = vehicle; } else { vehicleRow.style.display='none'; }
+  // Actions
+  const actions = document.getElementById('modalActions');
+  const requestId = get('data-request-id') || row.getAttribute('data-request-id');
+  // Preserve Close button, rebuild others except the last existing close
+  actions.querySelectorAll('button:not(.req-secondary)').forEach(b=>{ if(!b.classList.contains('req-secondary')) b.remove(); });
+  // Insert Edit/Cancel if pending
+  if(statusRaw === 'pending'){
+    const editLink = document.createElement('a');
+    editLink.href = '/employee/requests/' + requestId + '/edit/';
+    editLink.className = 'req-edit';
+    editLink.textContent = 'Edit Request';
+    actions.prepend(editLink);
+    // Cancel form
+    const cancelForm = document.createElement('form');
+    cancelForm.method='post';
+    cancelForm.action='/employee/requests/' + requestId + '/cancel/';
+    cancelForm.onsubmit = ()=> confirm('Cancel this request?');
+    // CSRF token (attempt to reuse one on page)
+    const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (csrfInput) {
+      const tokenClone = csrfInput.cloneNode(true);
+      cancelForm.appendChild(tokenClone);
+    } else {
+      // fallback: read CSRF token from cookie and insert hidden input
+      function getCookie(name) {
+        const match = document.cookie.match(new RegExp('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      }
+      const csrfToken = getCookie('csrftoken');
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'csrfmiddlewaretoken';
+      hidden.value = csrfToken || '';
+      cancelForm.appendChild(hidden);
+    }
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type='submit';
+    cancelBtn.className='req-danger';
+    cancelBtn.textContent='Cancel Request';
+    cancelForm.appendChild(cancelBtn);
+    actions.prepend(cancelForm);
+  }
+  modal.style.display='flex';
+  modal.setAttribute('aria-hidden','false');
+}
+function closeRequestModal(){
+  const modal = document.getElementById('requestModal');
+  if(modal){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
+}
+window.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeRequestModal(); } });
+window.addEventListener('click', function(e){ const modal = document.getElementById('requestModal'); if(modal && e.target===modal){ closeRequestModal(); } });
+</script>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

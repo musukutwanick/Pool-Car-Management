@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_available_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car"></i></span>
+            <span class="nav-text">Available Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_request_vehicle' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus"></i></span>
+            <span class="nav-text">Request Vehicle</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:employee_my_requests' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">My Requests</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Edit Request #{{ car_request.request_code }}</h1>
+        <p>Update your vehicle request details</p>
+      </div>
+
+      <div class="form-container">
+        <form method="post" class="request-form">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label for="subsidiary" class="form-label">Destination Company *</label>
+            <select name="subsidiary" id="subsidiary" class="form-control" required>
+              <option value="cell_insurance" {% if car_request.subsidiary == 'cell_insurance' %}selected{% endif %}>Cell Insurance</option>
+              <option value="cellmed" {% if car_request.subsidiary == 'cellmed' %}selected{% endif %}>Cellmed</option>
+              <option value="nectacare" {% if car_request.subsidiary == 'nectacare' %}selected{% endif %}>Nectacare</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="purpose" class="form-label">Purpose *</label>
+            <textarea name="purpose" id="purpose" rows="3" class="form-control" required>{{ car_request.purpose }}</textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="start_time" class="form-label">Start Date & Time *</label>
+              <input type="datetime-local" name="start_time" id="start_time" class="form-control" value="{{ car_request.start_time|date:'Y-m-d\TH:i' }}" required>
+            </div>
+
+            <div class="form-group">
+              <label for="end_time" class="form-label">End Date & Time *</label>
+              <input type="datetime-local" name="end_time" id="end_time" class="form-control" value="{{ car_request.end_time|date:'Y-m-d\TH:i' }}" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="location" class="form-label">Destination *</label>
+            <input type="text" name="location" id="location" class="form-control" placeholder="e.g., Harare head office, Bulawayo, SMH" value="{{ car_request.location }}" required>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="out_of_town" {% if car_request.out_of_town %}checked{% endif %}>
+              <span>Out of Town Trip</span>
+            </label>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="needs_driver" {% if car_request.needs_driver %}checked{% endif %}>
+              <span>Require Driver</span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-submit">
+              <i class="fas fa-save"></i>
+              Save Changes
+            </button>
+            <a href="{% url 'fleet:employee_my_requests' %}" class="btn-cancel">
+              <i class="fas fa-times"></i>
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.form-container {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  max-width: 700px;
+}
+
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-control {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #fed41f;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.checkbox-group {
+  margin: 8px 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btn-submit {
+  background: #fed41f;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.btn-submit:hover {
+  background: #fed41f;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search vehicles, models..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-content">
+          <h1>Edit Vehicle</h1>
+          <p>Update details for vehicle <strong>{{ vehicle.reg_number }}</strong></p>
+        </div>
+      </div>
+
+      <div class="form-container-left">
+        <div class="form-card">
+          <form method="post" enctype="multipart/form-data" class="vehicle-form">
+            {% csrf_token %}
+
+            <div style="display:flex; gap:18px; align-items:flex-start;">
+              <div style="flex:1;">
+                <div class="form-section">
+                  <h3 class="section-title">Vehicle Information</h3>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="{{ form.reg_number.id_for_label }}">Registration Number *</label>
+                      {{ form.reg_number }}
+                      {% if form.reg_number.errors %}
+                        <div class="field-error">{{ form.reg_number.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.vehicle_type.id_for_label }}">Vehicle Type</label>
+                      {{ form.vehicle_type }}
+                      {% if form.vehicle_type.errors %}
+                        <div class="field-error">{{ form.vehicle_type.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.model.id_for_label }}">Model</label>
+                      {{ form.model }}
+                      {% if form.model.errors %}
+                        <div class="field-error">{{ form.model.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.fuel_type.id_for_label }}">Fuel Type</label>
+                      {{ form.fuel_type }}
+                      {% if form.fuel_type.errors %}
+                        <div class="field-error">{{ form.fuel_type.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.engine_capacity.id_for_label }}">Engine Capacity</label>
+                      {{ form.engine_capacity }}
+                      {% if form.engine_capacity.errors %}
+                        <div class="field-error">{{ form.engine_capacity.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.subsidiary.id_for_label }}">Subsidiary</label>
+                      {{ form.subsidiary }}
+                      {% if form.subsidiary.errors %}
+                        <div class="field-error">{{ form.subsidiary.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.branch.id_for_label }}">Branch</label>
+                      {{ form.branch }}
+                      {% if form.branch.errors %}
+                        <div class="field-error">{{ form.branch.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-section">
+                  <h3 class="section-title">Maintenance Information</h3>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="{{ form.current_mileage.id_for_label }}">Current Mileage</label>
+                      {{ form.current_mileage }}
+                      {% if form.current_mileage.errors %}
+                        <div class="field-error">{{ form.current_mileage.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                      <label for="{{ form.service_interval_mileage.id_for_label }}">Service Interval (km)</label>
+                      {{ form.service_interval_mileage }}
+                      {% if form.service_interval_mileage.errors %}
+                        <div class="field-error">{{ form.service_interval_mileage.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-section">
+                  <h3 class="section-title">Additional Details</h3>
+                  <div class="form-group full-width">
+                    <label for="{{ form.accessories.id_for_label }}">Accessories</label>
+                    {{ form.accessories }}
+                    {% if form.accessories.errors %}
+                      <div class="field-error">{{ form.accessories.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <div class="form-group full-width">
+                    <label for="{{ form.image.id_for_label }}">Vehicle Image (replace)</label>
+                    {{ form.image }}
+                    {% if form.image.errors %}
+                      <div class="field-error">{{ form.image.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="form-actions-improved" style="margin-top:14px;">
+                  <button type="submit" class="btn-add-vehicle">
+                    <i class="fas fa-save"></i>
+                    Save Changes
+                  </button>
+                  <a href="{% url 'fleet:manage_vehicles' %}" class="btn-cancel">
+                    Cancel
+                  </a>
+                </div>
+
+              </div>
+
+              <div style="width:260px;">
+                <div style="background:#fff; border-radius:12px; padding:12px; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                  <h4 style="margin-top:0; font-size:14px;">Current Image</h4>
+                  {% if vehicle.image %}
+                    <img src="{{ vehicle.image.url }}" alt="{{ vehicle.reg_number }}" style="width:100%; border-radius:8px; object-fit:cover; height:160px;">
+                  {% else %}
+                    <div style="width:100%; height:160px; display:flex; align-items:center; justify-content:center; background:#f3f4f6; border-radius:8px; color:#9ca3af;">
+                      <i class="fas fa-car" style="font-size:36px;"></i>
+                    </div>
+                  {% endif %}
+
+                  <div style="margin-top:12px; font-size:13px; color:#6b7280;">
+                    <div><strong>Registration:</strong> {{ vehicle.reg_number }}</div>
+                    <div style="margin-top:6px;"><strong>Status:</strong> {{ vehicle.get_status_display }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+
+{% endblock %}

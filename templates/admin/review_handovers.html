@@ -1,0 +1,569 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search handovers, employees..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        
+        <li class="nav-item active">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Vehicle Handover</h1>
+          <p>Manage active assignments and process vehicle returns</p>
+        </div>
+      </div>
+
+      <!-- Active Assignments -->
+      <div class="table-container">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Active Vehicle Assignments</h3>
+            <div class="table-actions">
+              <span class="badge-count">{{ active_assignments.count }} active</span>
+            </div>
+          </div>
+
+          <div class="table-content">
+            {% if active_assignments %}
+              <table class="handovers-table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Driver/Employee</th>
+                    <th>Vehicle</th>
+                    <th>Current Mileage</th>
+                    <th>Trip Period</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for assignment in active_assignments %}
+                    <tr>
+                      <td>
+                        <strong>#{{ assignment.id }}</strong>
+                      </td>
+                      <td>
+                        <div class="employee-cell">
+                          <div class="employee-name">{{ assignment.requester.get_full_name|default:assignment.requester.username }}</div>
+                          <div class="employee-dept">
+                            {% if assignment.requester.profile.is_dedicated_driver %}
+                              <span class="badge-driver">Driver</span>
+                            {% else %}
+                              {{ assignment.subsidiary|title }}
+                            {% endif %}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="vehicle-info">
+                          <strong>{{ assignment.assigned_vehicle.reg_number }}</strong>
+                          <small>{{ assignment.assigned_vehicle.model }}</small>
+                        </div>
+                      </td>
+                      <td>{{ assignment.assigned_vehicle.current_mileage|default:"0" }} km</td>
+                      <td>
+                        <div class="trip-dates">
+                          <small>{{ assignment.start_time|date:"M d" }} - {{ assignment.end_time|date:"M d, Y" }}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="status-text">In Use</span>
+                      </td>
+                      <td>
+                        <div class="action-buttons">
+                          {% if assignment.requester.profile.is_dedicated_driver %}
+                          <a href="{% url 'fleet:complete_handover' assignment.id %}" class="btn-return" title="Process Return">
+                            <i class="fas fa-undo"></i>
+                            Vehicle Returned
+                          </a>
+                          {% else %}
+                            {% if assignment.handover %}
+                              {% if assignment.handover.submitted_at %}
+                              <a href="{% url 'fleet:review_handover_detail' assignment.handover.id %}" class="btn-handover" title="Review Handover">
+                                <i class="fas fa-clipboard-check"></i>
+                                Review Handover
+                              </a>
+                              {% else %}
+                              <span class="waiting-text">
+                                <i class="fas fa-clock"></i>
+                                Awaiting Employee Return
+                              </span>
+                              {% endif %}
+                            {% else %}
+                            <span class="waiting-text">
+                              <i class="fas fa-clock"></i>
+                              Awaiting Employee Return
+                            </span>
+                            {% endif %}
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="fas fa-car"></i>
+                </div>
+                <h3>No Active Assignments</h3>
+                <p>All vehicles are currently available</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Reviews (if any) -->
+      {% if pending_reviews %}
+      <div class="table-container" style="margin-top: 24px;">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Completed Handovers</h3>
+          </div>
+
+          <div class="table-content">
+            <table class="handovers-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Employee</th>
+                  <th>Vehicle</th>
+                  <th>Return Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for handover in pending_reviews %}
+                  <tr>
+                    <td>
+                      <strong>#{{ handover.request.id }}</strong>
+                    </td>
+                    <td>
+                      <div class="employee-cell">
+                        <div class="employee-name">{{ handover.request.requester.get_full_name|default:handover.request.requester.username }}</div>
+                        <div class="employee-dept">{{ handover.request.subsidiary|title }}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="vehicle-info">
+                        <strong>{{ handover.request.assigned_vehicle.reg_number }}</strong>
+                        <small>{{ handover.request.assigned_vehicle.model }}</small>
+                      </div>
+                    </td>
+                    <td>{{ handover.submitted_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                      <div class="action-buttons">
+                        {% if handover.checklist_document %}
+                        <a href="{{ handover.checklist_document.url }}" class="btn-handover" title="View Handover Checklist" target="_blank">
+                          <i class="fas fa-file-download"></i>
+                          Handover Checklist
+                        </a>
+                        {% else %}
+                        <a href="{% url 'fleet:review_handover_detail' handover.id %}" class="btn-handover" title="View Details">
+                          <i class="fas fa-clipboard-check"></i>
+                          View Details
+                        </a>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Completed Reviews (Last 30 Days) -->
+      {% if completed_reviews %}
+      <div class="table-container" style="margin-top: 24px;">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>All Reviewed Handovers</h3>
+            <span class="badge-count">{{ completed_reviews.count }}</span>
+          </div>
+
+          <div class="table-content">
+            <table class="handovers-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Employee</th>
+                  <th>Vehicle</th>
+                  <th>Reviewed Date</th>
+                  <th>Status</th>
+                  <th>Reviewed By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for handover in completed_reviews %}
+                  <tr>
+                    <td>
+                      <strong>#{{ handover.request.id }}</strong>
+                    </td>
+                    <td>
+                      <div class="employee-cell">
+                        <div class="employee-name">{{ handover.request.requester.get_full_name|default:handover.request.requester.username }}</div>
+                        <div class="employee-dept">{{ handover.request.subsidiary|title }}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="vehicle-info">
+                        <strong>{{ handover.request.assigned_vehicle.reg_number }}</strong>
+                        <small>{{ handover.request.assigned_vehicle.model }}</small>
+                      </div>
+                    </td>
+                    <td>{{ handover.reviewed_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                      <span class="status-badge status-{{ handover.approval_status }}">
+                        {{ handover.get_approval_status_display }}
+                      </span>
+                    </td>
+                    <td>{{ handover.reviewed_by.get_full_name|default:handover.reviewed_by.username }}</td>
+                    <td>
+                      <div class="action-buttons">
+                        <a href="{% url 'fleet:review_handover_detail' handover.id %}" class="btn-view" title="View Details">
+                          <i class="fas fa-eye"></i>
+                          View
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<style>
+.badge-driver {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.badge-count.pending {
+  background: #fed41f;
+}
+
+.btn-handover {
+  background: #fed41f; /* requested yellow */
+  color: #111827; /* black text/icon */
+  padding: 6px 10px; /* reduced padding to shorten button */
+  border-radius: 8px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.btn-handover:hover {
+  filter: brightness(0.95);
+  color: #111827;
+}
+.btn-handover i { font-size: 14px; color: #111827; }
+
+.btn-primary {
+  background: #0369a1;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.btn-primary i { font-size: 14px; }
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 7px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.btn-secondary i { font-size: 12px; }
+.btn-icon { background: transparent; border: none; color: #374151; text-decoration:none; padding:6px; }
+.fuel-level { font-weight:600; color:#374151; }
+
+.btn-return {
+  background: #fed41f; /* requested yellow */
+  color: #111827; /* black text/icon */
+  border: none;
+  padding: 6px 10px; /* smaller button */
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.btn-return:hover {
+  filter: brightness(0.95);
+  color: #111827;
+}
+
+.btn-view {
+  background: #dbeafe;
+  color: #0369a1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view:hover {
+  background: #0369a1;
+  color: white;
+}
+
+.btn-view i { font-size: 14px; }
+
+.waiting-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.waiting-text i {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.status-approved {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.status-badge.status-rejected {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.status-badge.status-needs_review {
+  background: #fef3c7;
+  color: #000000;
+}
+
+.status-badge.status-pending {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.trip-dates small {
+  color: #6b7280;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.querySelector('.search-input');
+  
+  if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      const tables = document.querySelectorAll('.handovers-table tbody');
+      
+      tables.forEach(tbody => {
+        const rows = tbody.querySelectorAll('tr');
+        
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          if (text.includes(searchTerm)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+      
+      // Check for empty results
+      tables.forEach(tbody => {
+        const visibleRows = tbody.querySelectorAll('tr:not([style*="display: none"])');
+        const tableCard = tbody.closest('.table-card');
+        
+        let noResultsMsg = tableCard.querySelector('.no-results-message');
+        
+        if (visibleRows.length === 0 && searchTerm) {
+          if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.className = 'no-results-message';
+            noResultsMsg.style.cssText = 'padding: 32px; text-align: center; color: #6b7280;';
+            noResultsMsg.innerHTML = '<i class="fas fa-search" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i><p style="font-size: 14px; margin: 0;">No results found for "' + searchTerm + '"</p>';
+            tableCard.querySelector('.table-content').appendChild(noResultsMsg);
+          }
+          tbody.closest('table').style.display = 'none';
+        } else {
+          if (noResultsMsg) {
+            noResultsMsg.remove();
+          }
+          tbody.closest('table').style.display = '';
+        }
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

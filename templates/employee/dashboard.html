@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header that spans full width -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+    
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search" class="search-input">
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item active">
+          <a href="{% url 'fleet:employee_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        
+        {% if is_manager %}
+        <li class="nav-item">
+          <a href="{% url 'fleet:supervisor_pending_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-check-circle"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+            {% if pending_approval_count > 0 %}
+            <span class="badge-count">{{ pending_approval_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        {% endif %}
+        
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_available_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car"></i></span>
+            <span class="nav-text">Available Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_request_vehicle' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus"></i></span>
+            <span class="nav-text">Request Vehicle</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_my_requests' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">My Requests</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:employee_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Dashboard Content -->
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Welcome Back, {{ user_name }}!</h1>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <i class="fas fa-car"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.available_vehicles }}</h3>
+            <p>Available Vehicles</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon yellow">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.pending_requests }}</h3>
+            <p>Pending Requests</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon green">
+            <i class="fas fa-check"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.assigned_requests }}</h3>
+            <p>Assigned Vehicles</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon purple">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.total_requests }}</h3>
+            <p>Total Requests</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity removed per request -->
+    </main>
+  </div>
+</div>
+
+<style>
+.badge-count {
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: auto;
+  min-width: 20px;
+  text-align: center;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// Close profile menu when clicking outside
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

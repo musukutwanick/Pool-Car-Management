@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  /* Alert Cards Styling (neutral accents, black icons) */
+  .alerts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .alert-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(245, 158, 11, 0.12); /* thin yellow-orange lining all round */
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* removed colorful top accent bar to keep a clean, professional look */
+
+  .alert-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3); /* slightly more visible on hover */
+  }
+
+  .alert-card .alert-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    background: #fff7e6; /* light orange background */
+    border: 1px solid #fde8c8;
+  }
+
+  .alert-card .alert-icon i {
+    font-size: 24px;
+    color: #000000; /* black icons */
+  }
+
+  .alert-card {
+    cursor: pointer;
+  }
+
+  .alert-content h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 10px;
+  }
+
+  .alert-content p {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .alert-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fed41f;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .alert-link:hover {
+    color: #fed41f;
+    gap: 12px;
+  }
+
+  .alert-link::after {
+    content: '→';
+    font-size: 16px;
+  }
+
+  .alerts-section {
+    margin-top: 32px;
+  }
+
+  .alerts-section .section-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 24px;
+  }
+
+  /* Management Sections Styling */
+  .management-sections {
+    margin-top: 32px;
+  }
+
+  .management-sections .section-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 24px;
+  }
+
+  .management-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .management-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.12);
+    transition: all 0.22s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .management-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .management-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .management-icon i {
+    font-size: 28px;
+    color: #ffffff;
+  }
+
+  .management-content h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 12px;
+  }
+
+  .management-content p {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .management-stats {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .stat-number {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #3b82f6;
+  }
+
+  .stat-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* No persistent left accent; hover shows a very thin border around the whole card */
+
+  /* Icon background variants to match provided brand swatches */
+  .alert-card.warning .alert-icon {
+    background: #fff7ed; /* light orange */
+    border-color: #fde3c6;
+  }
+
+  .alert-card.info .alert-icon {
+    background: #f3f4f6; /* neutral light grey */
+    border-color: #e6e9ec;
+  }
+
+  .alert-card.success .alert-icon {
+    background: #eef6ff; /* light blue-ish */
+    border-color: #dfecff;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search" class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item active">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Welcome Back, {{ user_name }}!</h1>
+        <p>Fleet administration and vehicle management</p>
+      </div>
+
+      <!-- Management Sections removed per request -->
+
+      <!-- Alerts -->
+      <div class="alerts-section">
+        <h2 class="section-title">System Notifications</h2>
+        <div class="alerts-grid">
+          <div class="alert-card info" data-href="{% url 'fleet:vehicle_assignments' %}" role="button" tabindex="0">
+            <div class="alert-icon">
+              <i class="fas fa-clipboard-check"></i>
+            </div>
+            <div class="alert-content">
+              <h3>Approved Requests Ready for Assignment</h3>
+              <p>{{ stats.approved_requests }} approved request{{ stats.approved_requests|pluralize }} awaiting vehicle assignment</p>
+              <!-- Click the card to assign vehicles -->
+            </div>
+          </div>
+          
+          <div class="alert-card warning" data-href="{% url 'fleet:manage_vehicles' %}" role="button" tabindex="0">
+            <div class="alert-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="alert-content">
+              <h3>Vehicles Requiring Maintenance</h3>
+              <p>{{ stats.maintenance_due }} vehicles are due for scheduled maintenance</p>
+              <!-- Click the card to view details -->
+            </div>
+          </div>
+          
+          <div class="alert-card success" data-href="{% url 'fleet:review_handovers' %}" role="button" tabindex="0">
+            <div class="alert-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="alert-content">
+              <h3>Handover Reviews</h3>
+              <p>{{ stats.pending_handovers }} handover checklists await review</p>
+              <!-- Click the card to review handovers -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// Close profile menu when clicking outside
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Make alert cards clickable (supports Enter/Space key)
+document.addEventListener('DOMContentLoaded', function() {
+  // Alert cards
+  document.querySelectorAll('.alert-card[data-href]').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var url = card.getAttribute('data-href');
+      if (url) window.location.href = url;
+    });
+    card.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        var url = card.getAttribute('data-href');
+        if (url) window.location.href = url;
+      }
+    });
+  });
+  
+  // Management cards
+  document.querySelectorAll('.management-card[data-href]').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var url = card.getAttribute('data-href');
+      if (url) window.location.href = url;
+    });
+    card.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        var url = card.getAttribute('data-href');
+        if (url) window.location.href = url;
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

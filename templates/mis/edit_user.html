@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Header and Sidebar -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search..." class="search-input">
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="{% url 'fleet:mis_dashboard' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-home"></i></span><span class="nav-text">Home</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_manage_users' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-users"></i></span><span class="nav-text">Manage Users</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_manage_drivers' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-id-card"></i></span><span class="nav-text">Manage Drivers</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_reset_password' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-key"></i></span><span class="nav-text">Reset Passwords</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_audit_logs' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-clipboard-list"></i></span><span class="nav-text">Audit Logs</span></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Edit User: {{ edit_user.username }}</h1>
+          <p>Update user information and role settings</p>
+        </div>
+      </div>
+
+      <div class="form-container-left">
+        <form method="post" class="edit-user-form">
+          {% csrf_token %}
+          
+          <div class="form-section">
+            <h3 class="section-title">User Information</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" value="{{ edit_user.username }}" class="form-control" disabled>
+                <small class="form-help">Username cannot be changed</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="first_name" class="form-label">First Name</label>
+                <input type="text" name="first_name" value="{{ edit_user.first_name }}" class="form-control">
+              </div>
+
+              <div class="form-group">
+                <label for="last_name" class="form-label">Last Name</label>
+                <input type="text" name="last_name" value="{{ edit_user.last_name }}" class="form-control">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" name="email" value="{{ edit_user.email }}" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">Role & Permissions</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="role" class="form-label">Role</label>
+                <select name="role" class="form-control">
+                  <option value="employee" {% if profile.role == 'employee' %}selected{% endif %}>Employee</option>
+                  <option value="admin" {% if profile.role == 'admin' %}selected{% endif %}>Admin</option>
+                  <option value="gm" {% if profile.role == 'gm' %}selected{% endif %}>GM</option>
+                  <option value="ceo" {% if profile.role == 'ceo' %}selected{% endif %}>CEO</option>
+                  <option value="mis" {% if profile.role == 'mis' %}selected{% endif %}>MIS Admin</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="subsidiary" class="form-label">Subsidiary</label>
+                <select name="subsidiary" class="form-control">
+                  <option value="cell_insurance" {% if profile.subsidiary == 'cell_insurance' %}selected{% endif %}>Cell Insurance</option>
+                  <option value="cellmed" {% if profile.subsidiary == 'cellmed' %}selected{% endif %}>CellMed</option>
+                  <option value="nectacare" {% if profile.subsidiary == 'nectacare' %}selected{% endif %}>Nectacare</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="employee_type" class="form-label required">Employee Type</label>
+                <select name="employee_type" class="form-control">
+                  <option value="GENERAL_EMPLOYEE" {% if profile.employee_type == 'GENERAL_EMPLOYEE' %}selected{% endif %}>General Employee</option>
+                  <option value="MANAGER" {% if profile.employee_type == 'MANAGER' %}selected{% endif %}>Manager</option>
+                </select>
+                <small class="form-help">Manager = Can approve requests and make requests (approved by CEO)</small>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Approval Rights</label>
+                <div style="padding: 10px; background: #f0f9ff; border-radius: 4px; border-left: 3px solid #3b82f6;">
+                  <small class="form-help" style="display: block; margin: 0;">
+                    <strong>Manager:</strong> Can approve employee requests + Make requests (CEO approves)<br>
+                    <strong>General Employee:</strong> Selects supervisor when making requests
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="checkbox-group">
+                <input type="checkbox" name="is_dedicated_driver" id="is_dedicated_driver" {% if profile.is_dedicated_driver %}checked{% endif %}>
+                <label for="is_dedicated_driver" class="checkbox-label">
+                  Dedicated Driver
+                  <small>Check if this user is a driver</small>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-update-user">
+              <i class="fas fa-save"></i>
+              Update User
+            </button>
+            <a href="{% url 'fleet:mis_manage_users' %}" class="btn-cancel">
+              <i class="fas fa-times"></i>
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.btn-update-user {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
+  justify-content: center;
+}
+
+.btn-update-user:hover {
+  background: #2563eb;
+}
+
+.form-help {
+  display: block;
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.checkbox-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.checkbox-label small {
+  color: #6b7280;
+  font-size: 13px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

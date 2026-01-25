@@ -1,0 +1,651 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+/* Filter controls */
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px; /* now placed under heading */
+}
+
+.filter-btn {
+  padding: 4px 12px;
+  border: 1px solid #fed41f;
+  background: transparent; /* Default state without color */
+  color: black; /* Text remains black */
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-btn:hover {
+  background: #fff7e6;
+}
+
+  .filter-btn.active {
+    background: #fed41f; /* primary yellow when selected */
+    color: black;
+    border-color: #e6b800;
+  }
+
+  .filter-btn.active:hover {
+    background: #f7d94a;
+    color: black;
+  }
+
+  /* keep :active for transient clicks but primary control is .active class */
+  .filter-btn:active {
+    background-color: #fed41f;
+    color: black;
+  }
+
+/* Approval buttons */
+.btn-approve {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-approve:hover {
+  background: #059669;
+}
+
+.btn-approve.ceo {
+  background: #8b5cf6;
+}
+
+.btn-approve.ceo:hover {
+  background: #7c3aed;
+}
+
+.page-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+</style>
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search requests..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <!-- Pending Approvals removed from admin sidebar (use Vehicle Assignments) -->
+        <li class="nav-item active">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-content">
+          <h1>Vehicle Assignments</h1>
+          
+        </div>
+      </div>
+
+      <!-- Filter buttons relocated above table (left aligned) -->
+      <div class="filter-controls" style="justify-content:flex-start; margin-bottom:12px;">
+        <button class="filter-btn" data-filter="employee">
+          <i class="fas fa-users"></i> Employees
+        </button>
+        <button class="filter-btn" data-filter="driver">
+          <i class="fas fa-id-card"></i> Drivers
+        </button>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="table-container">
+        {% csrf_token %}
+        <div class="table-card">
+          {% if assignable_count == 0 %}
+            <!-- informational banner removed per request -->
+          {% endif %}
+          {% if requests %}
+            <table class="vehicles-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Requester</th>
+                  <th>Company</th>
+                  <th>Destination</th>
+                  <th>Out of Town</th>
+                  <th>Needs Driver</th>
+                  <th>Supervisor Approval</th>
+                  <th>GM Approval</th>
+                  <th>CEO Approval</th>
+                  <th>Current Status</th>
+                  <th>Assigned Vehicle</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in requests %}
+                  <tr data-request-type="{{ r.requester.profile.role|default:'employee' }}">
+                    <td><strong>#{{ r.request_code }}</strong></td>
+                    <td>{{ r.requester.get_full_name|default:r.requester.username }}</td>
+                    <td>{{ r.get_subsidiary_display }}</td>
+                    <td>{{ r.location }}</td>
+                    <td>{% if r.out_of_town %}<span class="badge-yes">Yes</span>{% else %}<span class="badge-no">No</span>{% endif %}</td>
+                    <td>{% if r.needs_driver %}<span class="badge-driver-needed">Yes</span>{% else %}—{% endif %}</td>
+                    <td>
+                      {% if r.needs_supervisor_approval %}
+                        {% if r.supervisor_approved_by %}<span class="badge-approved">✓ Approved</span>{% else %}<span class="badge-pending">Pending</span>{% endif %}
+                      {% else %}
+                        <span class="badge-na">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.needs_gm_approval %}
+                        {% if r.gm_approved_by %}<span class="badge-approved">✓ Approved</span>{% else %}<span class="badge-pending">Pending</span>{% endif %}
+                      {% else %}
+                        <span class="badge-na">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.needs_ceo_approval %}
+                        {% if r.ceo_approved_by %}<span class="badge-approved">✓ Approved</span>{% else %}<span class="badge-pending">Pending</span>{% endif %}
+                      {% else %}
+                        <span class="badge-na">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.status == 'pending' %}<span class="badge-status-pending">Requested by {{ r.requester.get_full_name|default:r.requester.username }}</span>
+                      {% elif r.status == 'assigned' %}<span class="badge-assigned">Assigned</span>
+                      {% elif r.status == 'approved' %}<span class="badge-approved">Approved</span>
+                      {% elif r.status == 'completed' %}<span class="badge-completed">Completed</span>
+                      {% elif r.status == 'rejected' %}<span class="badge-rejected">Rejected</span>
+                      {% elif r.status == 'cancelled' %}<span class="badge-cancelled">Cancelled</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.assigned_vehicle %}
+                        {{ r.assigned_vehicle.reg_number }} — {{ r.assigned_vehicle.model }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.requester.profile.role == 'employee' %}
+                        {% if not r.assigned_vehicle and r.status not in 'rejected,cancelled,completed' %}
+                          {% if r.is_fully_approved %}
+                            <button class="btn-assign" onclick="showAssignModal('{{ r.id }}', '{{ r.request_code }}')">Assign</button>
+                          {% else %}
+                            <button class="btn-assign btn-assign-disabled" title="Awaiting final approvals" disabled>Assign</button>
+                          {% endif %}
+                        {% else %}—{% endif %}
+                      {% else %}—{% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="empty-state">
+              <i class="fas fa-clipboard-list fa-4x"></i>
+              <h3>No Requests</h3>
+              <p>No vehicle requests found</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Assign Vehicle Modal -->
+<div id="assignModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeAssignModal()">&times;</span>
+    <h2>Assign Vehicle to Request <span id="modalRequestCode"></span></h2>
+    <form id="assignForm" method="post" action="">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="vehicle_id">Select Vehicle:</label>
+        <select name="vehicle_id" id="vehicle_id" class="form-control" required>
+          <option value="">-- Select a vehicle --</option>
+          {% for v in available_vehicles %}
+            <option value="{{ v.id }}">{{ v.reg_number }}{% if v.model %} ({{ v.model }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn-assign-modal">Assign Vehicle</button>
+        <button type="button" class="btn-cancel-modal" onclick="closeAssignModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.vehicles-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.vehicles-table th {
+  background: #f9fafb;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.vehicles-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 12px;
+}
+
+.badge-yes, .badge-no, .badge-driver-needed, .badge-approved, .badge-pending, .badge-na,
+.badge-assigned, .badge-completed, .badge-rejected, .badge-cancelled, .badge-status-pending {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-yes { background: #d1fae5; color: #065f46; }
+.badge-no { background: #f3f4f6; color: #6b7280; }
+.badge-driver-needed { background: #dbeafe; color: #1e40af; }
+.badge-approved { background: #d1fae5; color: #065f46; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-na { background: #f3f4f6; color: #9ca3af; }
+.badge-assigned { background: #dbeafe; color: #1e40af; }
+.badge-completed { background: #e0e7ff; color: #3730a3; }
+.badge-rejected { background: #fee2e2; color: #991b1b; }
+.badge-cancelled { background: #f3f4f6; color: #6b7280; }
+.badge-status-pending { background: #fef3c7; color: #92400e; font-size: 11px; }
+
+/* Override specific badges to plain text (no pill) per design request */
+.badge-pending,
+.badge-assigned,
+.badge-status-pending {
+  background: transparent !important;
+  color: #0f172a !important; /* dark/black text */
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-weight: 600;
+  font-size: 12px !important;
+}
+
+.btn-assign {
+  background: #fed41f;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-assign:hover {
+  background: #fed41f;
+}
+
+.btn-assign-disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: 10% auto;
+  padding: 30px;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #000;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-primary {
+  background: #fed41f;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+}
+
+.btn-primary:hover {
+  background: #fed41f;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
+}
+
+/* Modal button styles - smaller and nicer */
+.btn-assign-modal, .btn-cancel-modal {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-assign-modal {
+  background: #fed41f;
+  color: #000;
+  flex: 1;
+}
+
+.btn-assign-modal:hover {
+  background: #fed41f;
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-cancel-modal {
+  background: #f3f4f6;
+  color: #374151;
+  flex: 1;
+}
+
+.btn-cancel-modal:hover {
+  background: #e5e7eb;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && menu && !dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+function showAssignModal(requestId, requestCode) {
+  const modal = document.getElementById('assignModal');
+  const form = document.getElementById('assignForm');
+  const codeSpan = document.getElementById('modalRequestCode');
+  if (!modal || !form || !codeSpan) return;
+  form.action = `/fleet-admin/vehicle-assignments/assign/${requestId}/`;
+  codeSpan.textContent = `#${requestCode}`;
+  modal.style.display = 'block';
+}
+
+function closeAssignModal() {
+  const modal = document.getElementById('assignModal');
+  if (modal) modal.style.display = 'none';
+}
+
+window.addEventListener('click', function(event) {
+  const modal = document.getElementById('assignModal');
+  if (modal && event.target === modal) {
+    closeAssignModal();
+  }
+});
+
+// Filtering logic
+function filterRequests(type) {
+  const rows = document.querySelectorAll('tbody tr[data-request-type]');
+  const buttons = document.querySelectorAll('.filter-btn');
+  buttons.forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.filter-btn[data-filter='${type}']`);
+  if (activeBtn) activeBtn.classList.add('active');
+  rows.forEach(row => {
+    const role = (row.getAttribute('data-request-type') || 'employee').toLowerCase();
+    if (type === 'all' || role === type) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.querySelector('.search-input');
+  
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.getAttribute('data-filter');
+      // If already active -> reset to show all
+      if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        filterRequests(''); // show all
+      } else {
+        filterRequests(type);
+      }
+    });
+  });
+  
+  // Search input
+  if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      const rows = document.querySelectorAll('tbody tr[data-request-type]');
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      
+      // Check for empty results
+      const visibleRows = document.querySelectorAll('tbody tr[data-request-type]:not([style*="display: none"])');
+      const tbody = document.querySelector('tbody');
+      const table = tbody ? tbody.closest('table') : null;
+      
+      let noResultsMsg = document.querySelector('.no-results-message');
+      
+      if (visibleRows.length === 0 && searchTerm && table) {
+        if (!noResultsMsg) {
+          noResultsMsg = document.createElement('div');
+          noResultsMsg.className = 'no-results-message';
+          noResultsMsg.style.cssText = 'padding: 32px; text-align: center; color: #6b7280; grid-column: 1 / -1;';
+          noResultsMsg.innerHTML = '<i class="fas fa-search" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i><p style="font-size: 14px; margin: 0;">No requests found for "' + searchTerm + '"</p>';
+          table.parentElement.appendChild(noResultsMsg);
+        }
+        table.style.opacity = '0.3';
+      } else {
+        if (noResultsMsg) {
+          noResultsMsg.remove();
+        }
+        if (table) {
+          table.style.opacity = '1';
+        }
+      }
+    });
+  }
+  
+  // Initial: show all (no active button)
+  filterRequests('');
+});
+</script>
+{% endblock %}

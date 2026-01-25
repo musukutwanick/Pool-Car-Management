@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Group" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool CarManager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search approval requests..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar chip-solid-orange" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ceo_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ceo_pending_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+            {% if pending_approval_count > 0 %}
+            <span class="badge-count">{{ pending_approval_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ceo_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Approvals</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ceo_analytics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+            <span class="nav-text">Company Analytics</span>
+          </a>
+        </li>
+        <!-- Reports link removed per request -->
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>CEO Pending Approvals</h1>
+          <p>Review and approve high-priority and out-of-town vehicle requests</p>
+        </div>
+      </div>
+
+      {% if requests and requests|length > 0 %}
+        <div class="card">
+          <div class="card-header">
+            <h3>Requests Requiring CEO Approval</h3>
+            <span class="badge badge-warning">{{ requests|length }} pending</span>
+          </div>
+          <div class="card-body">
+            <table class="vehicles-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Requester</th>
+                  <th>Division</th>
+                  <th>Destination</th>
+                  <th>Purpose</th>
+                  <th>Duration</th>
+                  <th>Requested On</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in requests %}
+                  <tr>
+                    <td><strong>#{{ r.id }}</strong></td>
+                    <td>
+                      <div class="requester-info">
+                        <strong>{{ r.requester.get_full_name|default:r.requester.username }}</strong>
+                        <small class="text-muted">{{ r.requester.profile.get_role_display|default:"Employee" }}</small>
+                      </div>
+                    </td>
+                    <td>
+                      {{ r.get_subsidiary_display }}
+                    </td>
+                    <td>
+                      <strong>{{ r.location|default:"Not specified" }}</strong>
+                      {% if r.out_of_town %}
+                        <span class="text-muted" style="display:block; font-size:12px;">Out of town</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="purpose-text">{{ r.purpose|truncatewords:10 }}</div>
+                    </td>
+                    <td>
+                      {% if r.start_time and r.end_time %}
+                        {{ r.start_time|date:"M d" }} - {{ r.end_time|date:"M d" }}
+                        <small class="text-muted">({{ r.end_time|timeuntil:r.start_time }})</small>
+                      {% else %}
+                        <span class="text-muted">Not specified</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ r.created_at|date:"M d, H:i" }}</td>
+                    <td>
+                      <div class="action-buttons-inline">
+                        <form method="POST" action="{% url 'fleet:ceo_approve_request' r.id %}" style="display: inline;" id="ceo-approve-form-{{ r.id }}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn-approve" onclick="handleCEOApproval({{ r.id }}); return false;">
+                            <i class="fas fa-check"></i> Approve
+                          </button>
+                        </form>
+                        <form method="POST" action="{% url 'fleet:ceo_reject_request' r.id %}" style="display: inline;" id="ceo-reject-form-{{ r.id }}">
+                          {% csrf_token %}
+                          <input type="hidden" name="rejection_reason" id="ceo-reject-reason-{{ r.id }}">
+                          <button type="button" class="btn-reject" onclick="openCEORejectModal({{ r.id }}, '{{ r.request_code }}')">
+                            <i class="fas fa-times"></i> Reject
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-clipboard-check" style="font-size: 64px; color: #d1d5db; margin-bottom: 20px;"></i>
+          <h3 style="color: #6b7280; margin-bottom: 8px;">No Pending CEO Approvals</h3>
+          <p style="color: #9ca3af;">All high-priority requests have been processed</p>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<style>
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.card-header h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-warning {
+  background: #fff7ed;
+  color: #fed41f;
+  border: 1px solid #fed7aa;
+}
+
+.badge-info {
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+}
+
+.requester-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.requester-info small {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.purpose-text {
+  max-width: 200px;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+/* Button styles inherited from base.html */
+
+.ceo-avatar { background: #fed41f !important; color:#000 !important; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.vehicles-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vehicles-table th {
+  padding: 12px 10px;
+  text-align: left;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.vehicles-table td {
+  padding: 12px 10px;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.vehicles-table td:last-child {
+  padding: 12px 8px;
+}
+
+.vehicles-table tr:hover {
+  background: #f9fafb;
+}
+
+.text-muted {
+  color: #6b7280 !important;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && menu && !dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// CEO Approval with success animation
+function handleCEOApproval(requestId) {
+  if (confirm('Are you sure you want to approve this request?')) {
+    // Hide page loader if it's showing
+    if (typeof hideLoader === 'function') {
+      hideLoader();
+    }
+    
+    showSuccessModal('Request Approved Successfully!');
+    
+    // Submit form after animation completes
+    setTimeout(function() {
+      hideSuccessModal();
+      document.getElementById('ceo-approve-form-' + requestId).submit();
+    }, 4000);
+  }
+}
+
+// CEO Rejection Modal
+function openCEORejectModal(requestId, requestCode) {
+  const modal = document.getElementById('ceoRejectModal');
+  document.getElementById('ceoRejectRequestCode').textContent = requestCode;
+  document.getElementById('ceoRejectRequestId').value = requestId;
+  document.getElementById('ceoRejectionReasonText').value = '';
+  modal.style.display = 'flex';
+}
+
+function closeCEORejectModal() {
+  document.getElementById('ceoRejectModal').style.display = 'none';
+}
+
+function submitCEORejection() {
+  const requestId = document.getElementById('ceoRejectRequestId').value;
+  const reason = document.getElementById('ceoRejectionReasonText').value.trim();
+  
+  if (!reason) {
+    alert('Please provide a reason for rejection.');
+    return;
+  }
+  
+  document.getElementById('ceo-reject-reason-' + requestId).value = reason;
+  document.getElementById('ceo-reject-form-' + requestId).submit();
+}
+</script>
+
+<!-- CEO Rejection Modal -->
+<div id="ceoRejectModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%;">
+    <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">Reject Request #<span id="ceoRejectRequestCode"></span></h3>
+    <input type="hidden" id="ceoRejectRequestId">
+    
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Reason for Rejection:</label>
+      <textarea id="ceoRejectionReasonText" rows="4" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; resize: vertical;" placeholder="Please provide a clear reason for rejecting this request..."></textarea>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button type="button" onclick="closeCEORejectModal()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+      <button type="button" onclick="submitCEORejection()" style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Reject Request</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

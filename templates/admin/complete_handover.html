@@ -1,0 +1,912 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search vehicles..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        
+        <li class="nav-item active">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Complete Vehicle Handover</h1>
+          <p>Process vehicle return and update records</p>
+        </div>
+      </div>
+
+      <!-- Vehicle and Driver Info Card -->
+      <div class="info-card">
+        <div class="info-row">
+          <div class="info-item">
+            <span class="info-label">Vehicle:</span>
+            <span class="info-value">
+              <strong>{{ car_request.assigned_vehicle.reg_number }}</strong> - {{ car_request.assigned_vehicle.model }}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Driver/Employee:</span>
+            <span class="info-value">{{ car_request.requester.get_full_name|default:car_request.requester.username }}</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
+            <span class="info-label">Current Mileage:</span>
+            <span class="info-value">{{ car_request.assigned_vehicle.current_mileage|default:"Not recorded" }} km</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Trip Duration:</span>
+            <span class="info-value">{{ car_request.start_time|date:"M d" }} - {{ car_request.end_time|date:"M d, Y" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Handover Completion Form -->
+      <div class="form-container-left">
+        <form method="post" enctype="multipart/form-data" class="handover-form">
+          {% csrf_token %}
+          
+          <div class="form-section">
+            <h3 class="section-title">Vehicle Return Details</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="{{ form.return_mileage.id_for_label }}" class="form-label required">{{ form.return_mileage.label }}</label>
+                {{ form.return_mileage }}
+                {% if form.return_mileage.errors %}
+                  <span class="form-error">{{ form.return_mileage.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="{{ form.return_date.id_for_label }}" class="form-label">{{ form.return_date.label }}</label>
+                {{ form.return_date }}
+                {% if form.return_date.errors %}
+                  <span class="form-error">{{ form.return_date.errors }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label for="{{ form.return_time.id_for_label }}" class="form-label">{{ form.return_time.label }}</label>
+                {{ form.return_time }}
+                {% if form.return_time.errors %}
+                  <span class="form-error">{{ form.return_time.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Checklist Section -->
+          <div class="form-section">
+            <h3 class="section-title">Vehicle Checklist</h3>
+            <p class="section-description">Click YES or NO for each item, add comments if needed</p>
+            
+            <!-- Alarm System -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.alarm_system_functional.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="alarm_system_functional" value="YES" {% if form.alarm_system_functional.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="alarm_system_functional" value="NO" {% if form.alarm_system_functional.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.alarm_system_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Lock Nuts Spanner -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.lock_nuts_spanner.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="lock_nuts_spanner" value="YES" {% if form.lock_nuts_spanner.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="lock_nuts_spanner" value="NO" {% if form.lock_nuts_spanner.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.lock_nuts_spanner_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Spare Wheel Hatchet -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.spare_wheel_hatchet.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="spare_wheel_hatchet" value="YES" {% if form.spare_wheel_hatchet.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="spare_wheel_hatchet" value="NO" {% if form.spare_wheel_hatchet.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.spare_wheel_hatchet_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Seat Belts -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.seat_belts_functioning.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="seat_belts_functioning" value="YES" {% if form.seat_belts_functioning.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="seat_belts_functioning" value="NO" {% if form.seat_belts_functioning.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.seat_belts_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Hand Brake -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.hand_brake_functioning.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="hand_brake_functioning" value="YES" {% if form.hand_brake_functioning.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="hand_brake_functioning" value="NO" {% if form.hand_brake_functioning.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.hand_brake_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- View Mirrors -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.view_mirrors_functioning.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="view_mirrors_functioning" value="YES" {% if form.view_mirrors_functioning.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="view_mirrors_functioning" value="NO" {% if form.view_mirrors_functioning.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.view_mirrors_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Vehicle Insurance Disk -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.vehicle_insurance_disk.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="vehicle_insurance_disk" value="YES" {% if form.vehicle_insurance_disk.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="vehicle_insurance_disk" value="NO" {% if form.vehicle_insurance_disk.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.vehicle_insurance_disk_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- AA Zimbabwe Card -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.aa_zimbabwe_card.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="aa_zimbabwe_card" value="YES" {% if form.aa_zimbabwe_card.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="aa_zimbabwe_card" value="NO" {% if form.aa_zimbabwe_card.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.aa_zimbabwe_card_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Vehicle Licence Disk -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.vehicle_licence_disk.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="vehicle_licence_disk" value="YES" {% if form.vehicle_licence_disk.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="vehicle_licence_disk" value="NO" {% if form.vehicle_licence_disk.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.vehicle_licence_disk_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Brake Lights -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.brake_lights_functioning.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="brake_lights_functioning" value="YES" {% if form.brake_lights_functioning.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="brake_lights_functioning" value="NO" {% if form.brake_lights_functioning.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.brake_lights_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Indicators -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.indicators_functioning.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="indicators_functioning" value="YES" {% if form.indicators_functioning.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="indicators_functioning" value="NO" {% if form.indicators_functioning.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.indicators_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Park Lights -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.park_lights_functioning.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="park_lights_functioning" value="YES" {% if form.park_lights_functioning.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="park_lights_functioning" value="NO" {% if form.park_lights_functioning.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.park_lights_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Spare Wheel -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.spare_wheel.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="spare_wheel" value="YES" {% if form.spare_wheel.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="spare_wheel" value="NO" {% if form.spare_wheel.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.spare_wheel_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Jack -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.jack.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="jack" value="YES" {% if form.jack.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="jack" value="NO" {% if form.jack.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.jack_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Wheel Spanner -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.wheel_spanner.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="wheel_spanner" value="YES" {% if form.wheel_spanner.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="wheel_spanner" value="NO" {% if form.wheel_spanner.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.wheel_spanner_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Tool Box -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.tool_box.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="tool_box" value="YES" {% if form.tool_box.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="tool_box" value="NO" {% if form.tool_box.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.tool_box_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Wheel Covers -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.wheel_covers.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="wheel_covers" value="YES" {% if form.wheel_covers.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="wheel_covers" value="NO" {% if form.wheel_covers.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.wheel_covers_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Seat Covers -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.seat_covers.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="seat_covers" value="YES" {% if form.seat_covers.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="seat_covers" value="NO" {% if form.seat_covers.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.seat_covers_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Reflectors -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.reflectors_installed.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="reflectors_installed" value="YES" {% if form.reflectors_installed.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="reflectors_installed" value="NO" {% if form.reflectors_installed.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.reflectors_installed_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Car Radio -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.car_radio.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="car_radio" value="YES" {% if form.car_radio.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="car_radio" value="NO" {% if form.car_radio.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.car_radio_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Floor Mats -->
+            <div class="checklist-item-new">
+              <div class="checklist-question">{{ form.floor_mats.label }}</div>
+              <div class="checklist-content">
+                <div class="yes-no-buttons">
+                  <label class="yn-button yes-button">
+                    <input type="radio" name="floor_mats" value="YES" {% if form.floor_mats.value == "YES" %}checked{% endif %}>
+                    <span><i class="fas fa-check"></i> YES</span>
+                  </label>
+                  <label class="yn-button no-button">
+                    <input type="radio" name="floor_mats" value="NO" {% if form.floor_mats.value == "NO" %}checked{% endif %}>
+                    <span><i class="fas fa-times"></i> NO</span>
+                  </label>
+                </div>
+                <div class="comments-field">
+                  {{ form.floor_mats_comments }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Fields -->
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">{{ form.fuel_reading.label }}</label>
+                {{ form.fuel_reading }}
+              </div>
+              <div class="form-group">
+                <label class="form-label">{{ form.mileage_kms.label }}</label>
+                {{ form.mileage_kms }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{{ form.scratches_dents.label }}</label>
+              {{ form.scratches_dents }}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{{ form.additional_comments.label }}</label>
+              {{ form.additional_comments }}
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">Attach Handover Documents</h3>
+            <p class="section-description">Upload the handover checklist and any supporting photos</p>
+            
+            <div class="form-group">
+              <label for="{{ form.checklist_document.id_for_label }}" class="form-label">{{ form.checklist_document.label }}</label>
+              {{ form.checklist_document }}
+              <small class="form-help">Accepts PDF, JPG, PNG files</small>
+              {% if form.checklist_document.errors %}
+                <span class="form-error">{{ form.checklist_document.errors }}</span>
+              {% endif %}
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="{{ form.additional_photo1.id_for_label }}" class="form-label">{{ form.additional_photo1.label }}</label>
+                {{ form.additional_photo1 }}
+                {% if form.additional_photo1.errors %}
+                  <span class="form-error">{{ form.additional_photo1.errors }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label for="{{ form.additional_photo2.id_for_label }}" class="form-label">{{ form.additional_photo2.label }}</label>
+                {{ form.additional_photo2 }}
+                {% if form.additional_photo2.errors %}
+                  <span class="form-error">{{ form.additional_photo2.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.additional_photo3.id_for_label }}" class="form-label">{{ form.additional_photo3.label }}</label>
+              {{ form.additional_photo3 }}
+              {% if form.additional_photo3.errors %}
+                <span class="form-error">{{ form.additional_photo3.errors }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-complete-handover">
+              <i class="fas fa-check-circle"></i>
+              Complete Handover
+            </button>
+            <a href="{% url 'fleet:review_handovers' %}" class="btn-cancel">
+              <i class="fas fa-times"></i>
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.info-card {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #111827;
+}
+
+  .section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+.section-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+  /* Add spacing between form sections for clearer separation */
+  .form-section {
+    margin-bottom: 28px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+.form-help {
+  display: block;
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.btn-complete-handover {
+  background: #fed41f;
+  color: #000;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+  justify-content: center;
+}
+
+.btn-complete-handover:hover {
+  background: #fed41f;
+}
+
+.checklist-item {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.checklist-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.checklist-item .form-row {
+  align-items: start;
+}
+
+.checklist-item .form-group:first-child {
+  flex: 0 0 200px;
+}
+
+.checklist-item .form-group:last-child {
+  flex: 1;
+}
+
+/* New Checklist Design */
+.checklist-item-new {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.checklist-item-new:hover {
+  background: #fff;
+  border-color: #fed41f;
+  box-shadow: 0 2px 8px rgba(254, 212, 31, 0.1);
+}
+
+.checklist-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.checklist-question::before {
+  content: '•';
+  color: #fed41f;
+  font-size: 20px;
+  margin-right: 8px;
+  font-weight: bold;
+}
+
+.checklist-content {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.yes-no-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.yn-button {
+  position: relative;
+  cursor: pointer;
+}
+
+.yn-button input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.yn-button span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  background: white;
+  color: #6b7280;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.yn-button:hover span {
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.yn-button input[type="radio"]:checked + span {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.yes-button input[type="radio"]:checked + span {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.no-button input[type="radio"]:checked + span {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+.comments-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.comments-field textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.comments-field textarea:focus {
+  outline: none;
+  border-color: #fed41f;
+  box-shadow: 0 0 0 3px rgba(254, 212, 31, 0.1);
+}
+
+.comments-field textarea::placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

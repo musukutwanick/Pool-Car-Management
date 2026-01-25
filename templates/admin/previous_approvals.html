@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search" class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Previous Assignments</h1>
+        <p>Review vehicle assignments you have previously processed</p>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="table-container">
+        {% if requests %}
+          <div class="table-card">
+            <table class="requests-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Requester</th>
+                  <th>Purpose</th>
+                  <th>Destination</th>
+                  <th>Vehicle Assigned</th>
+                  <th>Date Assigned</th>
+                  <th>Status</th>
+                  <th>GM Approval</th>
+                  <th>CEO Approval</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for request in requests %}
+                  <tr>
+                    <td><strong>#{{ request.request_code }}</strong></td>
+                    <td>{{ request.requester.get_full_name|default:request.requester.username }}</td>
+                    <td>{{ request.purpose|truncatechars:40 }}</td>
+                    <td>{{ request.location|truncatechars:30 }}</td>
+                    <td>
+                      {% if request.assigned_vehicle %}
+                        <strong>{{ request.assigned_vehicle.reg_number }}</strong> - {{ request.assigned_vehicle.model }}
+                      {% else %}
+                        <span class="status-text">Not Assigned</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ request.created_at|date:"M d, Y" }}</td>
+                    <td><span class="status-text">{{ request.status|title }}</span></td>
+                    <td>
+                      {% if request.approver1 %}
+                        <span class="status-text">✓ {{ request.approver1.get_full_name|default:request.approver1.username }}</span>
+                      {% else %}
+                        <span class="status-text">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if request.out_of_town %}
+                        {% if request.approver2 %}
+                          <span class="status-text">✓ {{ request.approver2.get_full_name|default:request.approver2.username }}</span>
+                        {% else %}
+                          <span class="status-text">—</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="status-text">N/A</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <i class="fas fa-car-alt fa-4x"></i>
+            <h3>No Previous Assignments</h3>
+            <p>You haven't assigned any vehicles yet.</p>
+            <a href="{% url 'fleet:vehicle_assignments' %}" class="btn-primary">
+              View Vehicle Assignments
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.table-container {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.requests-table th {
+  background: #f9fafb;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.requests-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.requests-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.status-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.empty-state i {
+  color: #e6e7eb;
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  font-size: 24px;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin-bottom: 28px;
+}
+
+.btn-primary {
+  background: #fed41f;
+  color: #000000;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,537 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  /* Modern Analytics Page Styling */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .chart-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(245, 158, 11, 0.12);
+    transition: all 0.3s ease;
+  }
+
+  .chart-card:hover {
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .chart-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(245, 158, 11, 0.12);
+  }
+
+  .chart-card-header h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+
+  .chart-badge {
+    padding: 4px 12px;
+    background: #fff7ed;
+    color: #fed41f;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 320px;
+  }
+
+  .stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card-modern {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(245, 158, 11, 0.12);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(245, 158, 11, 0.15);
+  }
+
+  .stat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .stat-icon-modern {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .stat-icon-modern.orange,
+  .stat-icon-modern.blue,
+  .stat-icon-modern.green,
+  .stat-icon-modern.purple,
+  .stat-icon-modern.red,
+  .stat-icon-modern.gray {
+    background: #fff7ed;
+    color: #111827;
+  }
+
+  .stat-details h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 4px 0;
+    line-height: 1;
+  }
+
+  .stat-details p {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+    font-weight: 500;
+  }
+  
+</style>
+
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/' %}{{ division_logo }}" alt="{{ division }}" class="header-logo-img">
+      </div>
+      <h1 class="header-title">{{ division }} Fleet Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search analytics..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  {% include 'executive/includes/gm_sidebar.html' with active_page='analytics' %}
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>{{ division }} Analytics & Statistics</h1>
+          <p>Division-specific fleet performance and usage metrics</p>
+        </div>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="stats-overview">
+        <div class="stat-card-modern">
+          <div class="stat-card-content">
+            <div class="stat-icon-modern orange">
+              <i class="fas fa-car"></i>
+            </div>
+            <div class="stat-details">
+              <h3>{{ vehicle_stats.total }}</h3>
+              <p>Division Vehicles</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stat-card-modern">
+          <div class="stat-card-content">
+            <div class="stat-icon-modern green">
+              <i class="fas fa-check"></i>
+            </div>
+            <div class="stat-details">
+              <h3>{{ vehicle_stats.available }}</h3>
+              <p>Available Now</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stat-card-modern">
+          <div class="stat-card-content">
+            <div class="stat-icon-modern blue">
+              <i class="fas fa-car-side"></i>
+            </div>
+            <div class="stat-details">
+              <h3>{{ vehicle_stats.booked }}</h3>
+              <p>In Use</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stat-card-modern">
+          <div class="stat-card-content">
+            <div class="stat-icon-modern purple">
+              <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="stat-details">
+              <h3>{{ request_stats.total }}</h3>
+              <p>Total Requests</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card-modern">
+          <div class="stat-card-content">
+            <div class="stat-icon-modern gray">
+              <i class="fas fa-tools"></i>
+            </div>
+            <div class="stat-details">
+              <h3>{{ vehicle_stats.maintenance }}</h3>
+              <p>Maintenance</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card-modern">
+          <div class="stat-card-content">
+            <div class="stat-icon-modern red">
+              <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div class="stat-details">
+              <h3>{{ request_stats.pending }}</h3>
+              <p>Pending Approval</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Charts -->
+      <div class="charts-grid">
+        <!-- Monthly Trends Chart -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3><span class="icon-chip-solid-orange" style="background-color: #fed41f;"><i class="fas fa-chart-line" style="color:#000;"></i></span> {{ division }} Monthly Trends</h3>
+            <span class="chart-badge">Last 6 Months</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Daily Usage Chart -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3><span class="icon-chip-solid-orange" style="background-color: #fed41f;"><i class="fas fa-chart-line" style="color:#000;"></i></span> Daily Usage</h3>
+            <span class="chart-badge">Last 30 Days</span>
+          </div>
+          <div class="chart-container" style="overflow-x:auto;">
+            <div style="width:1400px;">
+              <canvas id="dailyChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vehicle Status Breakdown -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3><span class="icon-chip-solid-orange" style="background-color: #fed41f;"><i class="fas fa-chart-pie" style="color:#000;"></i></span> Vehicle Status</h3>
+            <span class="chart-badge">Current</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="statusBreakdownChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Request Status Breakdown -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3><i class="fas fa-chart-pie" style="color: #8b5cf6; margin-right: 8px;"></i> Request Status</h3>
+            <span class="chart-badge">All Time</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Performing Vehicles section removed per request -->
+    </main>
+  </div>
+</div>
+
+<!-- Include Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && menu && !dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Chart.js Configuration
+const chartColors = {
+  orange: '#fed41f',
+  blue: '#3b82f6',
+  green: '#10b981',
+  purple: '#8b5cf6',
+  red: '#ef4444',
+  yellow: '#eab308',
+  pink: '#ec4899',
+  teal: '#14b8a6'
+};
+
+// Monthly Trends Chart
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+  type: 'line',
+  data: {
+    labels: {{ monthly_chart_labels|safe }},
+    datasets: [{
+      label: 'Requests',
+      data: {{ monthly_chart_data|safe }},
+      borderColor: chartColors.orange,
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      borderWidth: 3,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 6,
+      pointHoverRadius: 8,
+      pointBackgroundColor: '#fff',
+      pointBorderColor: chartColors.orange,
+      pointBorderWidth: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#1f2937',
+        padding: 12,
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: chartColors.orange,
+        borderWidth: 2
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          color: '#6b7280'
+        },
+        grid: {
+          color: '#f3f4f6'
+        }
+      },
+      x: {
+        ticks: {
+          color: '#6b7280'
+        },
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+});
+
+// Daily Usage Chart (continuous line)
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+new Chart(dailyCtx, {
+  type: 'line',
+  data: {
+    labels: {{ daily_chart_labels|safe }},
+    datasets: [{
+      label: 'Requests per Day',
+      data: {{ daily_chart_data|safe }},
+      borderColor: chartColors.orange,
+      backgroundColor: 'rgba(17,24,39,0.06)',
+      borderWidth: 3,
+      fill: true,
+      tension: 0.35,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#111827',
+      pointBorderColor: chartColors.orange,
+      pointBorderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#111827',
+        padding: 12,
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: chartColors.orange,
+        borderWidth: 2
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { color: '#6b7280' },
+        grid: { color: '#f3f4f6' }
+      },
+      x: {
+        ticks: { color: '#6b7280', maxRotation: 0, autoSkip: true },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+// Vehicle Status Breakdown Chart
+const statusBreakdownCtx = document.getElementById('statusBreakdownChart').getContext('2d');
+new Chart(statusBreakdownCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ vehicle_status_labels|safe }},
+    datasets: [{
+      data: {{ vehicle_status_data|safe }},
+      backgroundColor: [
+        '#10b981',  // Available - green
+        '#f59e0b',  // Booked - amber
+        '#ef4444',  // Maintenance - red
+        '#8b5cf6'   // Out of Service - purple
+      ],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          font: {
+            size: 12,
+            family: "'Source Sans 3', sans-serif"
+          },
+          color: '#6b7280'
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1f2937',
+        padding: 12,
+        titleColor: '#fff',
+        bodyColor: '#fff'
+      }
+    }
+  }
+});
+
+// Request Status Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Pending', 'Approved', 'Assigned', 'Completed', 'Rejected'],
+    datasets: [{
+      data: [
+        {{ request_stats.pending }},
+        {{ request_stats.approved }},
+        {{ request_stats.assigned }},
+        {{ request_stats.completed }},
+        {{ request_stats.rejected }}
+      ],
+      backgroundColor: [
+        chartColors.yellow,
+        chartColors.blue,
+        chartColors.teal,
+        chartColors.green,
+        chartColors.red
+      ],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          font: {
+            size: 12,
+            family: "'Source Sans 3', sans-serif"
+          },
+          color: '#6b7280'
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1f2937',
+        padding: 12,
+        titleColor: '#fff',
+        bodyColor: '#fff'
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

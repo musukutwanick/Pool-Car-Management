@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Review Request #{{ car_request.request_code }}</h1>
+  <p>Requester: {{ car_request.requester.get_full_name|default:car_request.requester.username }}</p>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="request-details">
+      <p><strong>Destination:</strong> {{ car_request.destination }}</p>
+      <p><strong>Purpose:</strong> {{ car_request.purpose }}</p>
+      <p><strong>Requested On:</strong> {{ car_request.created_at|date:"Y-m-d H:i" }}</p>
+      <p><strong>Current Status:</strong> {{ car_request.status|capfirst }}</p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit Decision</button>
+        <a href="{% url 'fleet:manage_requests' %}" class="btn">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

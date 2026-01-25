@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="min-hero">
+  <div class="hero-card">
+    <h1 class="hero-title">Cell Pool Car Manager</h1>
+    <p class="hero-desc">Request, approve and manage pool vehicles across the group.</p>
+    
+    <a href="{% url 'fleet:login_page' %}" class="cta">Access Pool Car Manager</a>
+    
+    <p class="subnote">Secure • Professional • Efficient</p>
+    
+    <div class="logos-card">
+      <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="logo-img">
+      <img src="{% static 'img/cellmed_thumb.png' %}" alt="CellMed" class="logo-img small">
+      <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="logo-img">
+    </div>
+  </div>
+</section>
+{% endblock %}

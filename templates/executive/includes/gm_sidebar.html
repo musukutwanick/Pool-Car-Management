@@ -1,0 +1,34 @@
+<!-- GM Sidebar Navigation -->
+<nav class="sidebar">
+  <div class="sidebar-nav">
+    <ul class="nav-menu">
+      <li class="nav-item {% if active_page == 'home' %}active{% endif %}">
+        <a href="{% url dashboard_url %}" class="nav-link">
+          <span class="nav-icon"><i class="fas fa-home"></i></span>
+          <span class="nav-text">Home</span>
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'pending' %}active{% endif %}">
+        <a href="{% url 'fleet:gm_pending_approvals' %}?division={{ division }}" class="nav-link">
+          <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+          <span class="nav-text">Pending Approvals</span>
+          {% if pending_approval_count > 0 %}
+          <span class="badge-count">{{ pending_approval_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'previous' %}active{% endif %}">
+        <a href="{% url 'fleet:gm_previous_approvals' %}?division={{ division }}" class="nav-link">
+          <span class="nav-icon"><i class="fas fa-history"></i></span>
+          <span class="nav-text">Previous Approvals</span>
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'analytics' %}active{% endif %}">
+        <a href="{% url 'fleet:gm_analytics' %}?division={{ division }}" class="nav-link">
+          <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+          <span class="nav-text">Usage Analytics</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

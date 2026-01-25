@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Group" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search reports..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar chip-solid-orange" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ceo_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_requests' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ceo_analytics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+            <span class="nav-text">Company Analytics</span>
+          </a>
+        </li>
+        <!-- Reports link removed per request -->
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Executive Reports</h1>
+          <p>Comprehensive fleet reports and strategic insights across all divisions</p>
+        </div>
+        <div class="page-header-right">
+          <a href="{% url 'fleet:ceo_dashboard' %}" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+
+      <!-- Report Generation -->
+      <div class="quick-actions-section">
+        <h2 class="section-title">Generate Executive Reports</h2>
+        <div class="actions-grid">
+          <a href="#" class="action-card">
+            <div class="action-icon">
+              <i class="fas fa-file-excel"></i>
+            </div>
+            <div class="action-text">
+              <h3>Company-Wide Usage Report</h3>
+              <p>Complete fleet usage across all divisions</p>
+            </div>
+            <i class="fas fa-download action-arrow"></i>
+          </a>
+          
+          <a href="#" class="action-card">
+            <div class="action-icon">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+            <div class="action-text">
+              <h3>Division Performance Summary</h3>
+              <p>Comparative analysis of all divisions</p>
+            </div>
+            <i class="fas fa-download action-arrow"></i>
+          </a>
+          
+          <a href="#" class="action-card">
+            <div class="action-icon">
+              <i class="fas fa-file-pdf"></i>
+            </div>
+            <div class="action-text">
+              <h3>Executive Summary</h3>
+              <p>Strategic overview and recommendations</p>
+            </div>
+            <i class="fas fa-download action-arrow"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Division Fleet Breakdown -->
+      <div class="recent-activity-section">
+        <h2 class="section-title">Cell Insurance Fleet (22 Vehicles)</h2>
+        <div class="activity-card">
+          <table class="vehicles-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Registration</th>
+                <th>Status</th>
+                <th>Mileage</th>
+                <th>Utilization</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Toyota Corolla</span>
+                  </div>
+                </td>
+                <td>ABC 123 GP</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>45,230 km</td>
+                <td>78%</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Honda Civic</span>
+                  </div>
+                </td>
+                <td>DEF 456 GP</td>
+                <td><span class="badge badge-warning">Booked</span></td>
+                <td>32,100 km</td>
+                <td>85%</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Nissan Almera</span>
+                  </div>
+                </td>
+                <td>GHI 789 GP</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>58,650 km</td>
+                <td>92%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cellmed Fleet -->
+      <div class="recent-activity-section">
+        <h2 class="section-title">Cellmed Fleet (15 Vehicles)</h2>
+        <div class="activity-card">
+          <table class="vehicles-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Registration</th>
+                <th>Status</th>
+                <th>Mileage</th>
+                <th>Utilization</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>VW Polo</span>
+                  </div>
+                </td>
+                <td>JKL 012 GP</td>
+                <td><span class="badge badge-danger">Maintenance</span></td>
+                <td>41,200 km</td>
+                <td>68%</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Toyota Hilux</span>
+                  </div>
+                </td>
+                <td>MNO 345 GP</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>28,900 km</td>
+                <td>82%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Nectacare Fleet -->
+      <div class="recent-activity-section">
+        <h2 class="section-title">Nectacare Fleet (10 Vehicles)</h2>
+        <div class="activity-card">
+          <table class="vehicles-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Registration</th>
+                <th>Status</th>
+                <th>Mileage</th>
+                <th>Utilization</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Ford Ranger</span>
+                  </div>
+                </td>
+                <td>PQR 678 GP</td>
+                <td><span class="badge badge-warning">Booked</span></td>
+                <td>35,450 km</td>
+                <td>95%</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Mazda CX-5</span>
+                  </div>
+                </td>
+                <td>STU 901 GP</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>22,300 km</td>
+                <td>88%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Company Activity -->
+      <div class="recent-activity-section">
+        <h2 class="section-title">Recent Company-Wide Activity</h2>
+        <div class="activity-card">
+          <div class="activity-timeline">
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>CEO Approved - Long-Distance Request</h4>
+                <p>Cell Insurance • Cape Town trip • 1,400 km</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 28, 2024</span>
+              </div>
+            </div>
+            
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>Division Manager Approved - Local Request</h4>
+                <p>Cellmed • Durban meeting • 145 km</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 27, 2024</span>
+              </div>
+            </div>
+            
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>CEO Approved - Long-Distance Request</h4>
+                <p>Nectacare • Johannesburg conference • 580 km</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 26, 2024</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-dot info"></div>
+              <div class="activity-details">
+                <h4>Fleet Maintenance Scheduled</h4>
+                <p>Company-wide quarterly maintenance across all divisions</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 25, 2024</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.ceo-avatar { background: #fed41f; color:#000; }
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.vehicle-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

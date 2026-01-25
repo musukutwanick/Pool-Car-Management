@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+/* Action buttons styling */
+.action-buttons,
+.action-buttons-inline {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+/* Button styles inherited from base.html */
+</style>
+<style>
+/* Small badge to flag driver requirement */
+.badge-driver-needed {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+</style>
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/' %}{{ division_logo }}" alt="{{ division }}" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search requests..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  {% include 'executive/includes/gm_sidebar.html' with active_page='pending' %}
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>{{ division }} - Pending Approvals</h1>
+          <p>Review and process vehicle requests for your division</p>
+        </div>
+      </div>
+
+      {% if requests and requests|length > 0 %}
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Requests Awaiting GM Approval</h3>
+            <span class="badge-count">{{ requests|length }} pending</span>
+          </div>
+          <table class="vehicles-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Requester</th>
+                <th>Destination / Purpose</th>
+                <th>Requested On</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in requests %}
+                <tr>
+                  <td><strong>#{{ r.id }}</strong></td>
+                  <td>
+                    <div class="employee-cell">
+                      <span class="employee-name">{{ r.requester.get_full_name|default:r.requester.username }}</span>
+                      <span class="employee-dept">{{ r.subsidiary }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ r.destination|default:r.location }}</strong>
+                      {% if r.reason or r.purpose %}
+                        <div style="color: #6b7280; font-size: 13px; margin-top: 2px;">{{ r.reason|default:r.purpose }}</div>
+                      {% endif %}
+                      {% if r.needs_driver %}
+                        <div class="badge-driver-needed"><i class="fas fa-id-card"></i> Driver Required</div>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td style="color: #6b7280;">{{ r.created_at|date:"d M Y, H:i" }}</td>
+                  <td>
+                    <span class="status-badge {{ r.status }}">{{ r.status|capfirst }}</span>
+                  </td>
+                  <td>
+                    <div class="action-buttons-inline">
+                      <form method="POST" action="{% url 'fleet:gm_approve_request' r.id %}" style="display: inline;" id="gm-approve-form-{{ r.id }}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-approve" onclick="handleGMApproval({{ r.id }}); return false;">
+                          <i class="fas fa-check"></i> Approve
+                        </button>
+                      </form>
+                      <form method="POST" action="{% url 'fleet:gm_reject_request' r.id %}" style="display: inline;" id="gm-reject-form-{{ r.id }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="rejection_reason" id="gm-reject-reason-{{ r.id }}">
+                        <button type="button" class="btn-reject" onclick="openGMRejectModal({{ r.id }}, '{{ r.request_code }}')">
+                          <i class="fas fa-times"></i> Reject
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-clipboard-check empty-icon"></i>
+          <h3>All Caught Up!</h3>
+          <p>No pending requests require your approval at this time</p>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && menu && !dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// GM Approval with success animation
+function handleGMApproval(requestId) {
+  if (confirm('Are you sure you want to approve this request?')) {
+    // Hide page loader if it's showing
+    if (typeof hideLoader === 'function') {
+      hideLoader();
+    }
+    
+    showSuccessModal('Request Approved Successfully!');
+    
+    // Submit form after animation completes
+    setTimeout(function() {
+      hideSuccessModal();
+      document.getElementById('gm-approve-form-' + requestId).submit();
+    }, 4000);
+  }
+}
+
+// GM Rejection Modal
+function openGMRejectModal(requestId, requestCode) {
+  const modal = document.getElementById('gmRejectModal');
+  document.getElementById('gmRejectRequestCode').textContent = requestCode;
+  document.getElementById('gmRejectRequestId').value = requestId;
+  document.getElementById('gmRejectionReasonText').value = '';
+  modal.style.display = 'flex';
+}
+
+function closeGMRejectModal() {
+  document.getElementById('gmRejectModal').style.display = 'none';
+}
+
+function submitGMRejection() {
+  const requestId = document.getElementById('gmRejectRequestId').value;
+  const reason = document.getElementById('gmRejectionReasonText').value.trim();
+  
+  if (!reason) {
+    alert('Please provide a reason for rejection.');
+    return;
+  }
+  
+  document.getElementById('gm-reject-reason-' + requestId).value = reason;
+  document.getElementById('gm-reject-form-' + requestId).submit();
+}
+</script>
+
+<!-- GM Rejection Modal -->
+<div id="gmRejectModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%;">
+    <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">Reject Request #<span id="gmRejectRequestCode"></span></h3>
+    <input type="hidden" id="gmRejectRequestId">
+    
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Reason for Rejection:</label>
+      <textarea id="gmRejectionReasonText" rows="4" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; resize: vertical;" placeholder="Please provide a clear reason for rejecting this request..."></textarea>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button type="button" onclick="closeGMRejectModal()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+      <button type="button" onclick="submitGMRejection()" style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Reject Request</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

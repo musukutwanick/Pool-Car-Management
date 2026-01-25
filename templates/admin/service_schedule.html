@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search vehicles..." class="search-input" id="searchInput">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Service Schedule</h1>
+          <p>Track vehicle maintenance and service intervals</p>
+        </div>
+        <div class="page-header-right">
+          <a href="{% url 'fleet:add_service_record' %}" class="btn-add">
+            <i class="fas fa-plus"></i>
+            Add Service Record
+          </a>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend-container">
+        <div class="legend-item">
+          <span class="legend-dot overdue"></span>
+          <span class="legend-text">Service Overdue</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot due-soon"></span>
+          <span class="legend-text">Service Due Soon (≤1000 km)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot normal"></span>
+          <span class="legend-text">Normal</span>
+        </div>
+      </div>
+
+      <!-- Service Records Grouped by Month -->
+      {% for month_group in monthly_records %}
+      <div class="month-section">
+        <h2 class="month-header">{{ month_group.month }}</h2>
+        
+        <div class="table-container">
+          <table class="service-table">
+            <thead>
+              <tr>
+                <th style="width: 12%;">Service Date</th>
+                <th style="width: 14%;">Vehicle Description</th>
+                <th style="width: 10%;">Registration Number</th>
+                <th style="width: 10%;">Driver</th>
+                <th style="width: 11%;">Service Type</th>
+                <th style="width: 10%;">Mileage at Service</th>
+                <th style="width: 10%;">Next Service Due</th>
+                <th style="width: 10%;">Current Mileage</th>
+                <th style="width: 8%;">KM Remaining</th>
+                <th style="width: 15%;">Service Company</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in month_group.records %}
+              <tr class="{% if record.is_overdue %}row-overdue{% elif record.is_due_soon %}row-due-soon{% endif %}">
+                <td>{{ record.service_date|date:"d M Y" }}</td>
+                <td>{{ record.description }}</td>
+                <td class="reg-number">{{ record.registration }}</td>
+                <td>{{ record.driver }}</td>
+                <td>{{ record.service_type }}</td>
+                <td class="text-right">{{ record.mileage_at_service|floatformat:0 }}</td>
+                <td class="text-right">{{ record.next_service_due|floatformat:0 }}</td>
+                <td class="text-right">{{ record.current_mileage|floatformat:0 }}</td>
+                <td class="text-right km-remaining">
+                  {% if record.is_overdue %}
+                    <span class="badge badge-overdue">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      {{ record.km_remaining|floatformat:0 }}
+                    </span>
+                  {% elif record.is_due_soon %}
+                    <span class="badge badge-warning">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ record.km_remaining|floatformat:0 }}
+                    </span>
+                  {% else %}
+                    {{ record.km_remaining|floatformat:0 }}
+                  {% endif %}
+                </td>
+                <td>{{ record.service_company }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="10" class="text-center">No service records for this month</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% empty %}
+      <div class="no-records">
+        <i class="fas fa-inbox" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;"></i>
+        <p style="font-size: 18px; color: #6b7280; margin: 0;">No service records found</p>
+        <p style="font-size: 14px; color: #9ca3af; margin-top: 8px;">Add your first service record to get started</p>
+      </div>
+      {% endfor %}
+    </main>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.page-header-left h1 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.page-header-left p {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 15px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.page-header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: #fed41f;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(254, 212, 31, 0.2);
+  min-width: 180px;
+  justify-content: center;
+}
+
+.btn-add:hover {
+  background: #e5c01f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(254, 212, 31, 0.3);
+}
+
+.legend-container {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.month-section {
+  margin-bottom: 40px;
+}
+
+.month-header {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 20px 0;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fed41f 0%, #fffacd 100%);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(254, 212, 31, 0.2);
+  display: flex;
+  align-items: center;
+}
+
+.month-header::before {
+  content: '📅';
+  margin-right: 12px;
+  font-size: 28px;
+}
+
+.no-records {
+  background: white;
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.legend-container {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.overdue {
+  background: #ef4444;
+}
+
+.legend-dot.due-soon {
+  background: #fed41f;
+}
+
+.legend-dot.normal {
+  background: #10b981;
+}
+
+.legend-text {
+  font-size: 14px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.service-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Source Sans 3', sans-serif;
+}
+
+.service-table thead {
+  background: #fed41f;
+  color: #000;
+}
+
+.service-table th {
+  padding: 16px 16px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #fed41f;
+  white-space: nowrap;
+}
+
+.service-table th:nth-child(3),
+.service-table th:nth-child(4),
+.service-table th:nth-child(5),
+.service-table th:nth-child(6) {
+  text-align: right;
+}
+
+.service-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.15s ease;
+  background: #ffffff;
+}
+
+.service-table tbody tr:hover {
+  background: #f9fafb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.service-table tbody tr.row-overdue {
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+}
+
+.service-table tbody tr.row-overdue:hover {
+  background: #fecaca;
+}
+
+.service-table tbody tr.row-due-soon {
+  background: #fef3c7;
+  border-left: 4px solid #fed41f;
+}
+
+.service-table tbody tr.row-due-soon:hover {
+  background: #fde68a;
+}
+
+.service-table td {
+  padding: 16px 16px;
+  font-size: 14px;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.service-table td:nth-child(1) {
+  font-weight: 500;
+}
+
+.service-table td:nth-child(3),
+.service-table td:nth-child(4),
+.service-table td:nth-child(5),
+.service-table td:nth-child(6) {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.service-table td.text-center {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.reg-number {
+  font-weight: 700;
+  color: #111827;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.badge-overdue {
+  background: #dc2626;
+  color: white;
+}
+
+.badge-warning {
+  background: #fed41f;
+  color: white;
+}
+
+/* Search functionality */
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  background: white;
+  border-color: #fed41f;
+  box-shadow: 0 0 0 3px rgba(254, 212, 31, 0.1);
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Search functionality
+document.getElementById('searchInput').addEventListener('keyup', function() {
+  const searchValue = this.value.toLowerCase();
+  const monthSections = document.querySelectorAll('.month-section');
+  
+  monthSections.forEach(function(section) {
+    const table = section.querySelector('table tbody');
+    const rows = table.getElementsByTagName('tr');
+    let visibleRows = 0;
+    
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const text = row.textContent.toLowerCase();
+      
+      if (text.includes(searchValue)) {
+        row.style.display = '';
+        visibleRows++;
+      } else {
+        row.style.display = 'none';
+      }
+    }
+    
+    // Hide entire month section if no visible rows
+    if (visibleRows === 0) {
+      section.style.display = 'none';
+    } else {
+      section.style.display = 'block';
+    }
+  });
+});
+</script>
+{% endblock %}

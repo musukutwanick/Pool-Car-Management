@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search drivers..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_manage_users' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-users"></i></span>
+            <span class="nav-text">Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:mis_manage_drivers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+            <span class="nav-text">Manage Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_reset_password' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-key"></i></span>
+            <span class="nav-text">Reset Passwords</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:mis_audit_logs' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Audit Logs</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Manage Drivers</h1>
+          <p>Manage drivers who don't need system login access</p>
+        </div>
+      </div>
+
+      <!-- Drivers Table -->
+      <div class="table-container">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Drivers</h3>
+            <div class="table-actions">
+              <a href="{% url 'fleet:mis_add_driver' %}" class="btn-add-driver-small">
+                <i class="fas fa-plus"></i>
+                Add Driver
+              </a>
+              <span class="badge-count">{{ drivers.count }} drivers</span>
+            </div>
+          </div>
+
+          <div class="table-content">
+            {% if drivers %}
+              <table class="drivers-table">
+                <thead>
+                  <tr>
+                    <th>Driver</th>
+                    <th>Subsidiary</th>
+                    <th>Added</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for driver in drivers %}
+                    <tr>
+                      <td>
+                        <div class="driver-name">{{ driver.user.get_full_name }}</div>
+                      </td>
+                      <td>{{ driver.get_subsidiary_display }}</td>
+                      <td>{{ driver.user.date_joined|date:"M d, Y" }}</td>
+                      <td>
+                        {% if driver.user.is_active %}
+                          <span class="status-badge active">Active</span>
+                        {% else %}
+                          <span class="status-badge inactive">Inactive</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="action-buttons">
+                          <a href="{% url 'fleet:mis_edit_user' driver.user.id %}" class="btn-action" title="Edit Driver">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                          <form method="post" action="{% url 'fleet:mis_delete_driver' driver.user.id %}" style="display:inline; margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-action btn-delete" title="Delete Driver" onclick="return confirm('Delete this driver? This action cannot be undone.');">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+                {% else %}
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="fas fa-id-card"></i>
+                </div>
+                <h3>No Drivers</h3>
+                <p>Add drivers to the system</p>
+                <a href="{% url 'fleet:mis_add_driver' %}" class="btn-primary btn-compact">
+                  <i class="fas fa-plus"></i>
+                  Add Driver
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.drivers-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e5e7eb;
+}
+
+.drivers-table th {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+  text-transform: none;
+}
+
+.drivers-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+  color: #374151;
+}
+
+.drivers-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.driver-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-badge.active { 
+  background: #d1fae5; 
+  color: #059669; 
+}
+
+.status-badge.inactive { 
+  background: #fee2e2; 
+  color: #dc2626; 
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.btn-action:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.btn-action.btn-delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.btn-add-driver-small {
+  background: #fed41f;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  margin-right: 12px;
+  transition: background 0.12s ease;
+}
+
+.btn-add-driver-small:hover {
+  background: #fed41f;
+  color: white;
+}
+
+.btn-compact {
+  padding: 8px 14px !important;
+  font-size: 14px !important;
+  min-width: auto !important;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search requests..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <!-- Pending Approvals removed: approvals are handled via Vehicle Assignments -->
+        <li class="nav-item active">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+          <li class="nav-item">
+            <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+              <span class="nav-icon"><i class="fas fa-history"></i></span>
+              <span class="nav-text">Previous Assignments</span>
+            </a>
+          </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 style="font-size: 24px; margin-bottom: 4px;">All Vehicle Requests</h1>
+          <p style="font-size: 13px; color: #6b7280;">Monitor all requests and approval status</p>
+        </div>
+      </div>
+
+      {% if requests and requests|length > 0 %}
+        <div class="card">
+          <div class="card-body">
+            <table class="vehicles-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Requester</th>
+                  <th>Company</th>
+                  <th>Destination</th>
+                  <th>Out of Town</th>
+                  <th>Needs Driver</th>
+                  <th>GM Status</th>
+                  <th>CEO Status</th>
+                  <th>Vehicle Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in requests %}
+                  <tr>
+                    <td><strong>#{{ r.request_code }}</strong></td>
+                    <td>{{ r.requester.get_full_name|default:r.requester.username }}</td>
+                    <td>{{ r.subsidiary|title }}</td>
+                    <td>{{ r.location }}</td>
+                    <td>{% if r.out_of_town %}<span class="badge-yes">Yes</span>{% else %}<span class="badge-no">No</span>{% endif %}</td>
+                    <td>{% if r.needs_driver %}<span class="badge-driver-needed">Yes</span>{% else %}—{% endif %}</td>
+                    <td>
+                      {% if r.out_of_town %}
+                        {% if r.approver1 %}<span class="badge-approved">Approved</span>{% else %}<span class="badge-pending">Pending</span>{% endif %}
+                      {% else %}
+                        <span class="badge-na">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.out_of_town %}
+                        {% if r.approver2 %}<span class="badge-approved">Approved</span>{% else %}<span class="badge-pending">Pending</span>{% endif %}
+                      {% else %}
+                        <span class="badge-na">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if r.status == 'assigned' %}<span class="badge-assigned">Assigned</span>
+                      {% elif r.status == 'approved' %}<span class="badge-approved">Approved</span>
+                      {% elif r.status == 'pending' %}<span class="badge-pending">Pending</span>
+                      {% elif r.status == 'completed' %}<span class="badge-completed">Completed</span>
+                      {% elif r.status == 'rejected' %}<span class="badge-rejected">Rejected</span>
+                      {% else %}{{ r.status|capfirst }}{% endif %}
+                    </td>
+                    <td>
+                      <a href="{% url 'fleet:approve_request' r.id %}" class="btn btn-sm btn-primary">Review</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-clipboard-list" style="font-size: 64px; color: #d1d5db; margin-bottom: 20px;"></i>
+          <h3 style="color: #6b7280; margin-bottom: 8px;">No Pending Requests</h3>
+          <p style="color: #9ca3af;">All vehicle requests have been processed</p>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<style>
+.badge-yes { display:inline-block; padding:4px 8px; background:#fef3c7; color:#92400e; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-no { display:inline-block; padding:4px 8px; background:#f3f4f6; color:#6b7280; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-driver-needed { display:inline-block; padding:4px 8px; background:#dbeafe; color:#1e40af; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-approved { display:inline-block; padding:4px 8px; background:#d1fae5; color:#065f46; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-pending { display:inline-block; padding:4px 8px; background:#fef3c7; color:#92400e; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-assigned { display:inline-block; padding:4px 8px; background:#dbeafe; color:#1e40af; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-completed { display:inline-block; padding:4px 8px; background:#d1fae5; color:#065f46; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-rejected { display:inline-block; padding:4px 8px; background:#fee2e2; color:#991b1b; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-na { display:inline-block; padding:4px 8px; background:#f3f4f6; color:#9ca3af; border-radius:12px; font-size:11px; font-weight:600; }
+.vehicles-table th, .vehicles-table td { font-size:12px; padding:10px 8px; }
+.vehicles-table th { background:#f9fafb; font-weight:600; }
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && menu && !dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+
+{% endblock %}

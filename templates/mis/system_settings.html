@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Header and Sidebar -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search..." class="search-input">
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="{% url 'fleet:mis_dashboard' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-home"></i></span><span class="nav-text">Home</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_manage_users' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-users"></i></span><span class="nav-text">Manage Users</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_add_user' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-user-plus"></i></span><span class="nav-text">Add User</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_manage_drivers' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-id-card"></i></span><span class="nav-text">Manage Drivers</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_reset_password' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-key"></i></span><span class="nav-text">Reset Passwords</span></a></li>
+        <li class="nav-item"><a href="{% url 'fleet:mis_audit_logs' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-clipboard-list"></i></span><span class="nav-text">Audit Logs</span></a></li>
+        <li class="nav-item active"><a href="{% url 'fleet:mis_system_settings' %}" class="nav-link"><span class="nav-icon"><i class="fas fa-cogs"></i></span><span class="nav-text">System Settings</span></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>System Settings</h1>
+          <p>Configure system parameters and preferences</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="setting-card">
+          <div class="setting-header">
+            <h3>User Management Settings</h3>
+            <p>Configure user account policies</p>
+          </div>
+          <div class="setting-content">
+            <div class="setting-row">
+              <span class="setting-label">Default Password Length</span>
+              <input type="number" value="8" class="setting-input" min="6" max="20">
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">Account Lockout Threshold</span>
+              <input type="number" value="5" class="setting-input" min="3" max="10">
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">Session Timeout (minutes)</span>
+              <input type="number" value="30" class="setting-input" min="15" max="120">
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-header">
+            <h3>Fleet Management</h3>
+            <p>Fleet configuration settings</p>
+          </div>
+          <div class="setting-content">
+            <div class="setting-row">
+              <span class="setting-label">Auto-approve within hours</span>
+              <input type="number" value="24" class="setting-input" min="1" max="72">
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">Default request duration</span>
+              <select class="setting-input">
+                <option value="1">1 day</option>
+                <option value="3" selected>3 days</option>
+                <option value="7">1 week</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-header">
+            <h3>System Maintenance</h3>
+            <p>System maintenance tools</p>
+          </div>
+          <div class="setting-content">
+            <div class="maintenance-actions">
+              <button class="btn-maintenance">
+                <i class="fas fa-database"></i>
+                <span>Backup Database</span>
+              </button>
+              <button class="btn-maintenance">
+                <i class="fas fa-broom"></i>
+                <span>Clear Cache</span>
+              </button>
+              <button class="btn-maintenance">
+                <i class="fas fa-download"></i>
+                <span>Export Logs</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-save-settings">
+          <i class="fas fa-save"></i>
+          Save Settings
+        </button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.setting-card {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.setting-header {
+  margin-bottom: 20px;
+}
+
+.setting-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.setting-header p {
+  color: #6b7280;
+  margin: 0;
+  font-size: 14px;
+}
+
+.setting-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.setting-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.setting-input {
+  width: 120px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.maintenance-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-maintenance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.btn-maintenance:hover {
+  background: #f3f4f6;
+}
+
+.btn-save-settings {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-save-settings:hover {
+  background: #059669;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

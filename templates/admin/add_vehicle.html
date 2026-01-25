@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search vehicles, models..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-content">
+          <h1>Add New Vehicle</h1>
+          <p>Register a new vehicle to the fleet system</p>
+        </div>
+      </div>
+
+      <div class="form-container-left">
+        <div class="form-card">
+          <form method="post" enctype="multipart/form-data" class="vehicle-form">
+            {% csrf_token %}
+            
+            <div class="form-section">
+              <h3 class="section-title">Vehicle Information</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="{{ form.reg_number.id_for_label }}">Registration Number *</label>
+                  {{ form.reg_number }}
+                  {% if form.reg_number.errors %}
+                    <div class="field-error">{{ form.reg_number.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.vehicle_type.id_for_label }}">Vehicle Type</label>
+                  {{ form.vehicle_type }}
+                  {% if form.vehicle_type.errors %}
+                    <div class="field-error">{{ form.vehicle_type.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.model.id_for_label }}">Model</label>
+                  {{ form.model }}
+                  {% if form.model.errors %}
+                    <div class="field-error">{{ form.model.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.fuel_type.id_for_label }}">Fuel Type</label>
+                  {{ form.fuel_type }}
+                  {% if form.fuel_type.errors %}
+                    <div class="field-error">{{ form.fuel_type.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.engine_capacity.id_for_label }}">Engine Capacity</label>
+                  {{ form.engine_capacity }}
+                  {% if form.engine_capacity.errors %}
+                    <div class="field-error">{{ form.engine_capacity.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.subsidiary.id_for_label }}">Subsidiary</label>
+                  {{ form.subsidiary }}
+                  {% if form.subsidiary.errors %}
+                    <div class="field-error">{{ form.subsidiary.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.branch.id_for_label }}">Branch</label>
+                  {{ form.branch }}
+                  {% if form.branch.errors %}
+                    <div class="field-error">{{ form.branch.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Maintenance Information</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="{{ form.current_mileage.id_for_label }}">Current Mileage</label>
+                  {{ form.current_mileage }}
+                  {% if form.current_mileage.errors %}
+                    <div class="field-error">{{ form.current_mileage.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.service_interval_mileage.id_for_label }}">Service Interval (km)</label>
+                  {{ form.service_interval_mileage }}
+                  {% if form.service_interval_mileage.errors %}
+                    <div class="field-error">{{ form.service_interval_mileage.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Additional Details</h3>
+              <div class="form-group full-width">
+                <label for="{{ form.accessories.id_for_label }}">Accessories</label>
+                {{ form.accessories }}
+                {% if form.accessories.errors %}
+                  <div class="field-error">{{ form.accessories.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="form-group full-width">
+                <label for="{{ form.image.id_for_label }}">Vehicle Image</label>
+                {{ form.image }}
+                {% if form.image.errors %}
+                  <div class="field-error">{{ form.image.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-actions-improved">
+              <button type="submit" class="btn-add-vehicle">
+                <i class="fas fa-plus"></i>
+                Add Vehicle
+              </button>
+              <a href="{% url 'fleet:admin_dashboard' %}" class="btn-cancel">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+<script>
+// Branch options per subsidiary — keep in sync with backend VehicleForm.BRANCHES_BY_SUB
+const BRANCHES_BY_SUB = {
+  'nectacare': ['Harare branch', 'Bulawayo branch', 'Mutare branch', 'SMH', 'Ngezi'],
+  'cellmed': ['Harare head office', 'Harare Town office', 'Bulawayo branch', 'Zvishavane branch', 'Mutare branch', 'Ngezi branch'],
+  'cell_insurance': ['Harare branch', 'Bulawayo branch', 'Mutare branch', 'SMH', 'Ngezi']
+};
+
+function populateBranchOptions(sub) {
+  const branchSelect = document.getElementById('id_branch');
+  if (!branchSelect) return;
+
+  // Clear existing options
+  branchSelect.innerHTML = '';
+
+  // Add default
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.text = 'Select Branch';
+  branchSelect.appendChild(defaultOpt);
+
+  const list = BRANCHES_BY_SUB[sub] || [];
+  list.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.text = b;
+    branchSelect.appendChild(opt);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const subSelect = document.getElementById('id_subsidiary');
+  if (!subSelect) return;
+
+  // Initial population based on current value (useful for edit)
+  populateBranchOptions(subSelect.value);
+
+  subSelect.addEventListener('change', function(e) {
+    populateBranchOptions(e.target.value);
+  });
+});
+</script>
+
+{# Toast notifications using Django messages framework #}
+{% if messages %}
+  <div id="django-messages" style="display:none;">
+    {% for message in messages %}
+      <div class="django-message" data-message="{{ message|escapejs }}" data-tags="{{ message.tags }}"></div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<style>
+/* Simple toast styles */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.toast {
+  min-width: 280px;
+  max-width: 420px;
+  background: #111827;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(16,24,40,0.12);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+.toast.success { background: linear-gradient(135deg, #10b981, #059669); }
+.toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.toast .toast-icon { font-size: 18px; opacity: 0.95; }
+.toast .toast-text { flex: 1; font-weight: 600; }
+</style>
+
+<div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const msgsRoot = document.getElementById('django-messages');
+  if (!msgsRoot) return;
+
+  const msgs = msgsRoot.querySelectorAll('.django-message');
+  msgs.forEach(md => {
+    const text = md.getAttribute('data-message') || '';
+    const tags = (md.getAttribute('data-tags') || '').split(' ');
+    // Determine type (success, error, info)
+    let type = 'info';
+    if (tags.includes('success')) type = 'success';
+    else if (tags.includes('error') || tags.includes('danger')) type = 'error';
+
+    // Create toast
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+
+    const icon = document.createElement('div');
+    icon.className = 'toast-icon';
+    icon.innerHTML = type === 'success' ? '<i class="fas fa-check-circle"></i>' : (type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-info-circle"></i>');
+
+    const txt = document.createElement('div');
+    txt.className = 'toast-text';
+    txt.textContent = text;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.setAttribute('aria-label','Close');
+    closeBtn.style.background = 'transparent';
+    closeBtn.style.border = 'none';
+    closeBtn.style.color = 'rgba(255,255,255,0.9)';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.addEventListener('click', () => { container.removeChild(t); });
+
+    t.appendChild(icon);
+    t.appendChild(txt);
+    t.appendChild(closeBtn);
+
+    container.appendChild(t);
+
+    // Auto-remove after 4.5s
+    setTimeout(() => {
+      if (container.contains(t)) container.removeChild(t);
+    }, 4500);
+  });
+
+  // Also support direct URL parameter fallback: ?added=1
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('added') === '1') {
+      const t = document.createElement('div');
+      t.className = 'toast success';
+      const icon = document.createElement('div');
+      icon.className = 'toast-icon';
+      icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+      const txt = document.createElement('div');
+      txt.className = 'toast-text';
+      txt.textContent = 'Vehicle added';
+      const closeBtn = document.createElement('button');
+      closeBtn.setAttribute('aria-label','Close');
+      closeBtn.style.background = 'transparent';
+      closeBtn.style.border = 'none';
+      closeBtn.style.color = 'rgba(255,255,255,0.9)';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+      closeBtn.addEventListener('click', () => { if (container.contains(t)) container.removeChild(t); });
+      t.appendChild(icon);
+      t.appendChild(txt);
+      t.appendChild(closeBtn);
+      container.appendChild(t);
+      setTimeout(() => { if (container.contains(t)) container.removeChild(t); }, 4500);
+    }
+  } catch (e) { /* ignore */ }
+});
+</script>
+{% endblock %}

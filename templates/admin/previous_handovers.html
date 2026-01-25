@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Previous Handovers for {{ vehicle.reg_number }}</h1>
+          <p>Historic handover checklists for this vehicle</p>
+        </div>
+        <div class="page-header-right">
+          <a href="{% url 'fleet:review_handovers' %}" class="btn-return">Back to Handovers</a>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-card">
+          <div class="table-content">
+            {% if handovers %}
+            <table class="handovers-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Submitted At</th>
+                  <th>Fuel Level</th>
+                  <th>Condition</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for h in handovers %}
+                <tr>
+                  <td><strong>#{{ h.request.id }}</strong></td>
+                  <td>{{ h.submitted_at|date:"M d, Y H:i" }}</td>
+                  <td>{% if h.fuel_level %}{{ h.fuel_level }}{% else %}<span class="text-muted">Not specified</span>{% endif %}</td>
+                  <td>
+                    {% if h.damages %}
+                      <span class="status-badge maintenance">Issues Reported</span>
+                    {% else %}
+                      <span class="status-badge available">Good Condition</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'fleet:review_handover_detail' h.id %}" class="btn-icon" title="View checklist"><i class="fas fa-eye"></i></a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+              <div class="empty-state">
+                <h3>No previous handovers found</h3>
+                <p>There are no recorded handover checklists for this vehicle yet.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.btn-return { background: #10b981; color: white; border: none; padding: 8px 14px; border-radius: 6px; text-decoration:none; }
+.handovers-table th, .handovers-table td { padding: 12px 10px; }
+.status-badge.available { background: #d1fae5; color: #065f46; padding:6px 8px; border-radius:16px; font-weight:600; }
+.status-badge.maintenance { background: #fee2e2; color:#991b1b; padding:6px 8px; border-radius:16px; font-weight:600; }
+</style>
+
+{% endblock %}

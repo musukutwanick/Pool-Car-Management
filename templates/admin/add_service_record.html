@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/cellinsurance_thumb.png' %}" alt="Cell Insurance" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search vehicles..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:manage_vehicles' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-car-side"></i></span>
+            <span class="nav-text">Manage Vehicles</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:assign_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+            <span class="nav-text">Assign Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:vehicle_assignments' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Vehicle Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:admin_previous_approvals' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">Previous Assignments</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:review_handovers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Handover</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tools"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:fleet_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Add Service Record</h1>
+          <p>Record vehicle service and maintenance details</p>
+        </div>
+      </div>
+
+      <!-- Service Record Form -->
+      <div class="form-container">
+        <form method="post" class="service-form">
+          {% csrf_token %}
+          
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <div class="form-section">
+            <h3 class="section-title">Vehicle Information</h3>
+            
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="{{ form.vehicle.id_for_label }}" class="form-label">{{ form.vehicle.label }}</label>
+                {{ form.vehicle }}
+                {% if form.vehicle.errors %}
+                  <span class="form-error">{{ form.vehicle.errors }}</span>
+                {% endif %}
+                <span class="form-help">Select a pool car from the dropdown, OR enter vehicle details manually below for non-pool vehicles</span>
+              </div>
+            </div>
+
+            <div id="manualEntrySection" class="manual-entry-section">
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> <strong>Manual Entry Mode:</strong> Use these fields to record service for vehicles not in the pool car system
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="{{ form.vehicle_reg_number.id_for_label }}" class="form-label required-manual">{{ form.vehicle_reg_number.label }}</label>
+                  {{ form.vehicle_reg_number }}
+                  {% if form.vehicle_reg_number.errors %}
+                    <span class="form-error">{{ form.vehicle_reg_number.errors }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.vehicle_description.id_for_label }}" class="form-label">{{ form.vehicle_description.label }}</label>
+                  {{ form.vehicle_description }}
+                  {% if form.vehicle_description.errors %}
+                    <span class="form-error">{{ form.vehicle_description.errors }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="{{ form.driver_name.id_for_label }}" class="form-label">{{ form.driver_name.label }}</label>
+                  {{ form.driver_name }}
+                  {% if form.driver_name.errors %}
+                    <span class="form-error">{{ form.driver_name.errors }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="form-group">
+                  <label for="{{ form.current_mileage.id_for_label }}" class="form-label">{{ form.current_mileage.label }}</label>
+                  {{ form.current_mileage }}
+                  {% if form.current_mileage.errors %}
+                    <span class="form-error">{{ form.current_mileage.errors }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">Service Information</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="{{ form.service_date.id_for_label }}" class="form-label required">{{ form.service_date.label }}</label>
+                {{ form.service_date }}
+                {% if form.service_date.errors %}
+                  <span class="form-error">{{ form.service_date.errors }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label for="{{ form.service_type.id_for_label }}" class="form-label required">{{ form.service_type.label }}</label>
+                {{ form.service_type }}
+                {% if form.service_type.errors %}
+                  <span class="form-error">{{ form.service_type.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="{{ form.service_company.id_for_label }}" class="form-label required">{{ form.service_company.label }}</label>
+                {{ form.service_company }}
+                {% if form.service_company.errors %}
+                  <span class="form-error">{{ form.service_company.errors }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label for="{{ form.mileage_at_service.id_for_label }}" class="form-label required">{{ form.mileage_at_service.label }}</label>
+                {{ form.mileage_at_service }}
+                {% if form.mileage_at_service.errors %}
+                  <span class="form-error">{{ form.mileage_at_service.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+              <div class="form-group">
+                <label for="{{ form.next_service_due.id_for_label }}" class="form-label">{{ form.next_service_due.label }}</label>
+                {{ form.next_service_due }}
+                {% if form.next_service_due.errors %}
+                  <span class="form-error">{{ form.next_service_due.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="{{ form.cost.id_for_label }}" class="form-label">{{ form.cost.label }}</label>
+                {{ form.cost }}
+                {% if form.cost.errors %}
+                  <span class="form-error">{{ form.cost.errors }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label for="{{ form.invoice_number.id_for_label }}" class="form-label">{{ form.invoice_number.label }}</label>
+                {{ form.invoice_number }}
+                {% if form.invoice_number.errors %}
+                  <span class="form-error">{{ form.invoice_number.errors }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+              {{ form.description }}
+              {% if form.description.errors %}
+                <span class="form-error">{{ form.description.errors }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-save">
+              <i class="fas fa-save"></i>
+              Save Service Record
+            </button>
+            <a href="{% url 'fleet:service_schedule' %}" class="btn-cancel">
+              <i class="fas fa-times"></i>
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.page-header-left h1 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.page-header-left p {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 15px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.form-container {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #fed41f;
+}
+
+.form-section {
+  margin-bottom: 32px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: #ef4444;
+}
+
+.form-control {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #fed41f;
+  box-shadow: 0 0 0 3px rgba(254, 212, 31, 0.1);
+}
+
+.form-error {
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #fed41f;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-save:hover {
+  background: #fed41f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(254, 212, 31, 0.3);
+}
+
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.alert {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.alert-success {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.alert-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-help {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.manual-entry-section {
+  padding: 20px;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.manual-entry-section.hidden {
+  display: none;
+}
+
+.alert-info {
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  color: #1e40af;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-label.required-manual::after {
+  content: ' *';
+  color: #ef4444;
+  font-size: 12px;
+}
+
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Toggle manual entry section based on vehicle selection
+function toggleManualEntry(selectElement) {
+  const manualSection = document.getElementById('manualEntrySection');
+  const regNumberInput = document.querySelector('input[name="vehicle_reg_number"]');
+  const vehicleDescInput = document.querySelector('input[name="vehicle_description"]');
+  const driverInput = document.querySelector('input[name="driver_name"]');
+  const currentMileageInput = document.querySelector('input[name="current_mileage"]');
+  
+  if (selectElement.value) {
+    // Pool car selected - hide manual entry and clear fields
+    manualSection.classList.add('hidden');
+    if (regNumberInput) regNumberInput.value = '';
+    if (vehicleDescInput) vehicleDescInput.value = '';
+    if (driverInput) driverInput.value = '';
+    if (currentMileageInput) currentMileageInput.value = '';
+  } else {
+    // No pool car selected - show manual entry
+    manualSection.classList.remove('hidden');
+  }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const vehicleSelect = document.querySelector('select[name="vehicle"]');
+  if (vehicleSelect) {
+    // Check initial state
+    toggleManualEntry(vehicleSelect);
+  }
+});
+</script>
+{% endblock %}

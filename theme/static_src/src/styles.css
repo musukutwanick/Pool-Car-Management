@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Source+Sans+3:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root{
+	--cell-yellow: #fed41f;
+	--cell-black: #000000;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base typography and brand tokens */
+@layer base {
+	body {
+		font-family: 'Source Sans Pro', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+		color: #111827;
+		background-color: #f9fafb;
+	}
+	h1,h2,h3,h4,h5,h6 {
+		font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	}
+	.brand-yellow { background-color: var(--cell-yellow); }
+	.text-brand-yellow { color: var(--cell-yellow); }
+	.brand-black { background-color: var(--cell-black); }
+	.text-brand-black { color: var(--cell-black); }
+}
+
+/* Add additional utilities or component styles aligned with brand later */

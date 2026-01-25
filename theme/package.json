@@ -1,0 +1,9 @@
+{
+  "name": "theme",
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^3.0.0",
+    "autoprefixer": "^10.0.0",
+    "postcss": "^8.0.0"
+  }
+}

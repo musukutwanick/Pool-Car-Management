@@ -1,0 +1,504 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Pool Car Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <header class="bg-white shadow">
+     
+    </header>
+    <main class="py-6">
+      {% block content %}{% endblock %}
+    </main>
+
+    {# Page Loading Overlay #}
+    <div id="page-loader" class="page-loader">
+      <div class="loader-content">
+        <div class="loader-spinner"></div>
+        <p class="loader-text">Loading...</p>
+      </div>
+    </div>
+
+    {# Success Animation Modal #}
+    <div id="success-modal" class="success-modal">
+      <div class="success-modal-content">
+        <div class="success-animation">
+          <div class="success-checkmark">
+            <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+              <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+              <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+          </div>
+          <h2 class="success-title">Success!</h2>
+          <p class="success-message" id="success-message-text">Your request has been submitted successfully.</p>
+        </div>
+      </div>
+    </div>
+
+    {# Global toast notifications: reads Django messages and displays toasts #}
+    {% if messages %}
+      <div id="django-messages-root" style="display:none;">
+        {% for message in messages %}
+          <div class="django-message" data-message="{{ message|escapejs }}" data-tags="{{ message.tags }}"></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <style>
+    /* Global nav icon color (black per design) */
+    .nav-icon i { color: #111827; }
+
+    /* Disable/blur state for action buttons to prevent double submits */
+    .btn-approve:disabled, .btn-reject:disabled, .btn-processing {
+      opacity: 0.6;
+      filter: blur(0.3px);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Page Loader */
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .page-loader.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .loader-content {
+      text-align: center;
+    }
+
+    .loader-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #fed41f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loader-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0;
+    }
+
+    /* Success Modal */
+    .success-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .success-modal.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .success-modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      transform: scale(0.8);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .success-modal.active .success-modal-content {
+      transform: scale(1);
+    }
+
+    .success-animation {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .success-checkmark {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 24px;
+    }
+
+    .checkmark {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      display: block;
+      stroke-width: 3;
+      stroke: #fed41f;
+      stroke-miterlimit: 10;
+      box-shadow: inset 0px 0px 0px #fed41f;
+      animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
+    }
+
+    .checkmark-circle {
+      stroke-dasharray: 166;
+      stroke-dashoffset: 166;
+      stroke-width: 3;
+      stroke-miterlimit: 10;
+      stroke: #fed41f;
+      fill: none;
+      animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) 0s forwards;
+    }
+
+    .checkmark-check {
+      transform-origin: 50% 50%;
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      stroke: #000000;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: stroke 0.5s cubic-bezier(0.65, 0, 0.45, 1) 0.4s forwards;
+    }
+
+    @keyframes stroke {
+      100% {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @keyframes scale {
+      0%, 100% {
+        transform: none;
+      }
+      50% {
+        transform: scale3d(1.1, 1.1, 1);
+      }
+    }
+
+    @keyframes fill {
+      100% {
+        box-shadow: inset 0px 0px 0px 30px #fed41f;
+      }
+    }
+
+    .success-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 12px 0;
+      animation: fadeInUp 0.5s ease 1s both;
+    }
+
+    .success-message {
+      font-size: 16px;
+      color: #6b7280;
+      margin: 0;
+      line-height: 1.5;
+      animation: fadeInUp 0.5s ease 1.2s both;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Toast styles (global) */
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index:1200; display:flex; flex-direction:column; gap:12px; }
+    .toast { min-width:260px; max-width:420px; color:#fff; padding:12px 14px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 6px 20px rgba(16,24,40,0.12); font-weight:600; }
+    .toast.success { background: linear-gradient(135deg,#10b981,#059669); }
+    .toast.info { background: linear-gradient(135deg,#3b82f6,#2563eb); }
+    .toast.error { background: linear-gradient(135deg,#ef4444,#dc2626); }
+    .toast .toast-icon { font-size:18px; }
+    .toast .toast-text { flex:1; }
+    .toast button { background:transparent; border:none; color:rgba(255,255,255,0.9); cursor:pointer; }
+
+    /* Solid yellow chip/avatar per brand design */
+    .chip-solid-orange {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #fed41f; /* brand yellow */
+      color: #000; /* black text/icon */
+      font-weight: 600;
+    }
+
+    /* Icon chip variant for stats/cards */
+    .icon-chip-solid-orange {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background-color: #fed41f; /* brand yellow */
+      color: #000; /* black icon */
+    }
+    /* Header / logo styles - larger for visibility */
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      gap: 12px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-logo-img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      display: block;
+    }
+
+    @media (min-width: 768px) {
+      .header-logo-img {
+        width: 88px;
+        height: 88px;
+      }
+    }
+
+    /* Ensure manager form action buttons align side-by-side */
+    .form-actions, .form-actions-improved {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .form-actions a, .form-actions button, .form-actions-improved a, .form-actions-improved button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Standardize cancel/secondary button appearance across manager forms */
+    .btn-cancel {
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+    }
+
+    .btn-cancel:hover { background: #e5e7eb; }
+
+    /* Primary action (save/submit) sizing to match secondary */
+    .btn-save, .btn-add-vehicle, .btn-assign-driver, .btn-complete-handover, .btn-primary {
+      background: #fed41f;
+      color: #000;
+      border: none;
+      min-width: auto;
+      justify-content: center;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    /* Approval/Rejection buttons - fixed size for tables */
+    .btn-approve {
+      background: #fed41f;
+      color: #000;
+      border: none;
+      min-width: 100px;
+      width: 100px;
+      justify-content: center;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    
+    .btn-approve:hover {
+      background: #e5c01f;
+    }
+    
+    .btn-reject {
+      background: #ef4444;
+      color: white;
+      border: none;
+      min-width: 100px;
+      width: 100px;
+      justify-content: center;
+      padding: 8px 12px;
+      white-space: nowrap;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    
+    .btn-reject:hover {
+      background: #dc2626;
+    }
+    </style>
+
+    <script>
+    (function(){
+      // Page Loader Functions
+      window.showLoader = function() {
+        const loader = document.getElementById('page-loader');
+        if (loader) {
+          loader.classList.add('active');
+        }
+      };
+
+      window.hideLoader = function() {
+        const loader = document.getElementById('page-loader');
+        if (loader) {
+          loader.classList.remove('active');
+        }
+      };
+
+      // Success Modal Functions
+      window.showSuccessModal = function(message) {
+        const modal = document.getElementById('success-modal');
+        const messageText = document.getElementById('success-message-text');
+        if (modal) {
+          if (message && messageText) {
+            messageText.textContent = message;
+          }
+          modal.classList.add('active');
+          
+          // Auto-hide after 3 seconds
+          setTimeout(function() {
+            hideSuccessModal();
+          }, 3000);
+        }
+      };
+
+      window.hideSuccessModal = function() {
+        const modal = document.getElementById('success-modal');
+        if (modal) {
+          modal.classList.remove('active');
+        }
+      };
+
+      // Show loader on page navigation
+      window.addEventListener('beforeunload', function() {
+        showLoader();
+      });
+
+      // Hide loader when page is fully loaded
+      window.addEventListener('load', function() {
+        hideLoader();
+      });
+
+      // Prevent double-submits and add subtle blur on action buttons
+      function wireActionButtons(){
+        document.addEventListener('submit', function(e){
+          const form = e.target;
+          if(form && form.tagName === 'FORM'){
+            const btn = form.querySelector('button.btn-approve, button.btn-reject');
+            if(btn && !btn.disabled){
+              // Disable button on form submit to prevent double-submission
+              btn.classList.add('btn-processing');
+              btn.disabled = true;
+            }
+          }
+        });
+      }
+
+      function showToastsFromMessages(){
+        try{
+          const root = document.getElementById('django-messages-root');
+          const container = document.getElementById('toast-container');
+          if(!root || !container) return;
+          const msgs = root.querySelectorAll('.django-message');
+          msgs.forEach(md => {
+            const text = md.getAttribute('data-message') || '';
+            const tags = (md.getAttribute('data-tags') || '').split(' ');
+            let type = 'info';
+            if(tags.includes('success')) type = 'success';
+            else if(tags.includes('error')||tags.includes('danger')) type = 'error';
+
+            const t = document.createElement('div'); t.className = 'toast '+type;
+            const icon = document.createElement('div'); icon.className = 'toast-icon';
+            icon.innerHTML = type==='success'? '<i class="fas fa-check-circle"></i>' : (type==='error'? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-info-circle"></i>');
+            const txt = document.createElement('div'); txt.className = 'toast-text'; txt.textContent = text;
+            const btn = document.createElement('button'); btn.setAttribute('aria-label','Close'); btn.innerHTML = '<i class="fas fa-times"></i>';
+            btn.addEventListener('click', ()=>{ if(container.contains(t)) container.removeChild(t); });
+            t.appendChild(icon); t.appendChild(txt); t.appendChild(btn);
+            container.appendChild(t);
+            setTimeout(()=>{ if(container.contains(t)) container.removeChild(t); }, 4500);
+          });
+        }catch(e){/* silent */}
+      }
+      function init(){ wireActionButtons(); showToastsFromMessages(); }
+      if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+    })();
+    </script>
+  </body>
+</html>

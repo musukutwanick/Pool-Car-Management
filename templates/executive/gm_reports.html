@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/' %}{{ division_logo }}" alt="{{ division }}" class="header-logo-img">
+      </div>
+      <h1 class="header-title">Cell Pool Car Manager</h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search reports..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url dashboard_url %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:gm_pending_approvals' %}?division={{ division }}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+            <span class="nav-text">Pending Approvals</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:gm_analytics' %}?division={{ division }}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+            <span class="nav-text">Usage Analytics</span>
+          </a>
+        </li>
+        <!-- Reports link removed per request -->
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>{{ division }} Pool Car Reports</h1>
+          <p>Comprehensive reports and vehicle inventory for {{ division }}</p>
+        </div>
+        <div class="page-header-right">
+          <a href="{% url dashboard_url %}" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+
+      <!-- Report Actions -->
+      <div class="quick-actions-section">
+        <h2 class="section-title">Generate Reports</h2>
+        <div class="actions-grid">
+          <a href="#" class="action-card">
+            <div class="action-icon">
+              <i class="fas fa-file-excel"></i>
+            </div>
+            <div class="action-text">
+              <h3>Monthly Usage Report</h3>
+              <p>Export division vehicle usage for this month</p>
+            </div>
+            <i class="fas fa-download action-arrow"></i>
+          </a>
+          
+          <a href="#" class="action-card">
+            <div class="action-icon">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+            <div class="action-text">
+              <h3>Utilization Summary</h3>
+              <p>Fleet utilization breakdown and trends</p>
+            </div>
+            <i class="fas fa-download action-arrow"></i>
+          </a>
+          
+          <a href="#" class="action-card">
+            <div class="action-icon">
+              <i class="fas fa-file-pdf"></i>
+            </div>
+            <div class="action-text">
+              <h3>Trip History</h3>
+              <p>Complete trip logs for {{ division }}</p>
+            </div>
+            <i class="fas fa-download action-arrow"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Division Vehicle Inventory -->
+      <div class="recent-activity-section">
+        <h2 class="section-title">{{ division }} Vehicle Inventory</h2>
+        <div class="activity-card">
+          <table class="vehicles-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Registration</th>
+                <th>Model</th>
+                <th>Status</th>
+                <th>Current Mileage</th>
+                <th>Last Service</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Toyota Corolla</span>
+                  </div>
+                </td>
+                <td>ABC 123 GP</td>
+                <td>2022 XLi</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>45,230 km</td>
+                <td>2024-11-15</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Honda Civic</span>
+                  </div>
+                </td>
+                <td>DEF 456 GP</td>
+                <td>2023 LX</td>
+                <td><span class="badge badge-warning">Booked</span></td>
+                <td>32,100 km</td>
+                <td>2024-10-22</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Nissan Almera</span>
+                  </div>
+                </td>
+                <td>GHI 789 GP</td>
+                <td>2021 Acenta</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>58,650 km</td>
+                <td>2024-11-10</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>VW Polo</span>
+                  </div>
+                </td>
+                <td>JKL 012 GP</td>
+                <td>2022 Trendline</td>
+                <td><span class="badge badge-danger">Maintenance</span></td>
+                <td>41,200 km</td>
+                <td>2024-11-25</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="vehicle-cell">
+                    <i class="fas fa-car" style="color: #3b82f6; font-size: 20px;"></i>
+                    <span>Toyota Hilux</span>
+                  </div>
+                </td>
+                <td>MNO 345 GP</td>
+                <td>2023 2.4 GD-6</td>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>28,900 km</td>
+                <td>2024-11-01</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Trips -->
+      <div class="recent-activity-section">
+        <h2 class="section-title">Recent {{ division }} Trips</h2>
+        <div class="activity-card">
+          <div class="activity-timeline">
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>Dr. Smith - Toyota Corolla (ABC 123 GP)</h4>
+                <p>Durban Meeting • 145 km • Duration: 5 hours</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 27, 2024 • Completed</span>
+              </div>
+            </div>
+            
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>Jane Doe - Honda Civic (DEF 456 GP)</h4>
+                <p>Client Visit • 82 km • Duration: 3.5 hours</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 26, 2024 • Completed</span>
+              </div>
+            </div>
+            
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>Michael Johnson - Toyota Hilux (MNO 345 GP)</h4>
+                <p>Equipment Delivery • 220 km • Duration: 6 hours</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 25, 2024 • Completed</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-dot success"></div>
+              <div class="activity-details">
+                <h4>Sarah Williams - Nissan Almera (GHI 789 GP)</h4>
+                <p>Branch Visit • 65 km • Duration: 2.5 hours</p>
+                <span class="activity-time"><i class="fas fa-calendar"></i> Nov 24, 2024 • Completed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.vehicle-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+</style>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}
