@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-dark: #000;
+  }
+
+  /* Sidebar color overrides for ambulance theme */
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+    color: #000000 !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .users-table {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    margin-top: 24px;
+  }
+
+  .users-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .users-table th {
+    text-align: left;
+    padding: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 2px solid #f3f4f6;
+  }
+
+  .users-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f3f4f6;
+    color: #374151;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        Manage Ambulance Users
+      </h1>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_mis_manage_users' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-users"></i></span>
+            <span class="nav-text">Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_add_user' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-plus"></i></span>
+            <span class="nav-text">Add User</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1>Ambulance Module Users</h1>
+          <p>Manage users with access to Ambulance Manager</p>
+        </div>
+        <a href="{% url 'fleet:ambulance_mis_add_user' %}" style="background: var(--ambulance-primary); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+          <i class="fas fa-user-plus"></i> Add User
+        </a>
+      </div>
+
+      <div class="users-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Module Access</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td style="font-weight: 600;">{{ user.username }}</td>
+              <td>{{ user.get_full_name|default:"—" }}</td>
+              <td>{{ user.email|default:"—" }}</td>
+              <td><span class="role-badge">{{ user.profile.get_role_display }}</span></td>
+              <td><span class="role-badge">{{ user.profile.get_module_display }}</span></td>
+              <td>{{ user.date_joined|date:"M d, Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 48px; color: #6b7280;">
+                <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                <p>No users found.</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

@@ -8,6 +8,15 @@ urlpatterns = [
     path('', views.landing, name='landing'),
     path('login/', views.login_page, name='login_page'),
     
+    # Ambulance Module
+    path('ambulance/login/', views.ambulance_login_page, name='ambulance_login_page'),
+    path('ambulance/dashboard/admin/', views.ambulance_admin_dashboard, name='ambulance_admin_dashboard'),
+    path('ambulance/dashboard/nectacare-head/', views.nectacare_head_dashboard, name='nectacare_head_dashboard'),
+    path('ambulance/fleet/manage/', views.ambulance_manage_fleet, name='ambulance_manage_fleet'),
+    path('ambulance/fleet/add/', views.ambulance_add, name='ambulance_add'),
+    path('ambulance/usage/record/', views.ambulance_record_usage, name='ambulance_record_usage'),
+    path('ambulance/statistics/', views.ambulance_view_statistics, name='ambulance_view_statistics'),
+    
     # Dashboard routes
     path('employee/', views.employee_dashboard, name='employee_dashboard'),
     path('dashboard/admin/', views.admin_dashboard, name='admin_dashboard'),
@@ -83,4 +92,17 @@ urlpatterns = [
     path('employee/vehicles/', views.employee_available_vehicles, name='employee_available_vehicles'),
     path('employee/handover/', views.employee_handover_checklist, name='employee_handover_checklist'),
     path('employee/handover/<int:request_id>/', views.employee_handover_checklist, name='employee_handover_detail'),
+    
+    # Ambulance Manager Routes
+    path('ambulance/login/', views.ambulance_login_page, name='ambulance_login_page'),
+    path('ambulance/dashboard/admin/', views.ambulance_admin_dashboard, name='ambulance_admin_dashboard'),
+    path('ambulance/dashboard/nectacare-head/', views.nectacare_head_dashboard, name='nectacare_head_dashboard'),
+    path('ambulance/dashboard/mis/', views.ambulance_mis_dashboard, name='ambulance_mis_dashboard'),
+    path('ambulance/fleet/manage/', views.ambulance_manage_fleet, name='ambulance_manage_fleet'),
+    path('ambulance/fleet/add/', views.ambulance_add, name='ambulance_add'),
+    path('ambulance/driver/assign/', views.ambulance_assign_driver, name='ambulance_assign_driver'),
+    path('ambulance/usage/record/', views.ambulance_record_usage, name='ambulance_record_usage'),
+    path('ambulance/statistics/', views.ambulance_view_statistics, name='ambulance_view_statistics'),
+    path('ambulance/mis/users/manage/', views.ambulance_mis_manage_users, name='ambulance_mis_manage_users'),
+    path('ambulance/mis/users/add/', views.ambulance_mis_add_user, name='ambulance_mis_add_user'),
 ]

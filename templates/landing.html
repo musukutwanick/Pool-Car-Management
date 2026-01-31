@@ -4,10 +4,26 @@
 {% block content %}
 <section class="min-hero">
   <div class="hero-card">
-    <h1 class="hero-title">Cell Pool Car Manager</h1>
-    <p class="hero-desc">Request, approve and manage pool vehicles across the group.</p>
+    <h1 class="hero-title">Cell Pool Car and Ambulance Manager</h1>
+    <p class="hero-desc">Manage pool vehicles and ambulance fleet across the group.</p>
     
-    <a href="{% url 'fleet:login_page' %}" class="cta">Access Pool Car Manager</a>
+    <div class="module-selection">
+      <a href="{% url 'fleet:login_page' %}" class="module-card poolcar-module">
+        <div class="module-icon">
+          <i class="fas fa-car"></i>
+        </div>
+        <h2 class="module-title">Pool Car Manager</h2>
+        <p class="module-description">Request, approve and manage pool vehicles</p>
+      </a>
+      
+      <a href="{% url 'fleet:ambulance_login_page' %}" class="module-card ambulance-module">
+        <div class="module-icon">
+          <i class="fas fa-ambulance"></i>
+        </div>
+        <h2 class="module-title">Ambulance Manager</h2>
+        <p class="module-description">Track and manage ambulance fleet operations</p>
+      </a>
+    </div>
     
     <p class="subnote">Secure • Professional • Efficient</p>
     
@@ -18,4 +34,98 @@
     </div>
   </div>
 </section>
+
+<style>
+  .module-selection {
+    display: flex;
+    gap: 1.5rem;
+    margin: 2rem auto;
+    width: 100%;
+    max-width: 550px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .module-card {
+    border-radius: 10px;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 240px;
+    font-weight: 600;
+  }
+
+  .module-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .poolcar-module {
+    background: #fed41f;
+    color: #000;
+  }
+
+  .poolcar-module:hover {
+    background: #e5bf1b;
+  }
+
+  .ambulance-module {
+    background: #1c75bc;
+    color: #fff;
+  }
+
+  .ambulance-module:hover {
+    background: #155a94;
+  }
+
+  .module-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .poolcar-module .module-icon {
+    color: #000;
+  }
+
+  .ambulance-module .module-icon {
+    color: #fff;
+  }
+
+  .module-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .module-description {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 768px) {
+    .module-selection {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    
+    .module-card {
+      min-height: 240px;
+    }
+  }
+</style>
 {% endblock %}

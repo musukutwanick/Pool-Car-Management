@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-secondary: #155a94;
+    --ambulance-dark: #000;
+  }
+
+  /* Sidebar color overrides for ambulance theme */
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+    color: #000000 !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .btn-submit {
+    background: var(--ambulance-primary);
+    color: white;
+    padding: 12px 32px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        Add Ambulance User
+      </h1>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_manage_users' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-users"></i></span>
+            <span class="nav-text">Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_mis_add_user' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-plus"></i></span>
+            <span class="nav-text">Add User</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Add New User</h1>
+        <p>Create a new user for Ambulance Manager</p>
+      </div>
+
+      <div class="form-container">
+        <form method="post">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label for="username">Username *</label>
+            <input type="text" name="username" id="username" required>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" name="email" id="email" required>
+          </div>
+
+          <div class="form-group">
+            <label for="first_name">First Name *</label>
+            <input type="text" name="first_name" id="first_name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="last_name">Last Name *</label>
+            <input type="text" name="last_name" id="last_name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password *</label>
+            <input type="password" name="password" id="password" required>
+          </div>
+
+          <div class="form-group">
+            <label for="role">Role *</label>
+            <select name="role" id="role" required>
+              <option value="">Select Role</option>
+              <option value="ambulance_admin">Ambulance Admin</option>
+              <option value="ambulance_mis">Ambulance MIS Admin</option>
+              <option value="nectacare_head">Nectacare Head</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="module">Module Access *</label>
+            <select name="module" id="module" required>
+              <option value="ambulance">Ambulance Only</option>
+              <option value="both">Both Modules (Pool Car & Ambulance)</option>
+            </select>
+          </div>
+
+          <div style="margin-top: 32px; display: flex; gap: 12px;">
+            <button type="submit" class="btn-submit">
+              <i class="fas fa-save"></i> Create User
+            </button>
+            <a href="{% url 'fleet:ambulance_mis_manage_users' %}" style="padding: 12px 32px; border: 2px solid #d1d5db; border-radius: 8px; text-decoration: none; color: #6b7280; font-weight: 600;">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

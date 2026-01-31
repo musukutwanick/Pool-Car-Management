@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-secondary: #155a94;
+    --ambulance-dark: #000;
+  }
+
+  /* Sidebar color overrides for ambulance theme */
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+    color: #000000 !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .btn-submit {
+    background: var(--ambulance-primary);
+    color: white;
+    padding: 10px 24px;
+    border: 2px solid var(--ambulance-dark);
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-submit:hover {
+    background: var(--ambulance-secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .btn-cancel {
+    padding: 10px 24px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel:hover {
+    border-color: #9ca3af;
+    color: #374151;
+    background-color: #f9fafb;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        Add New Ambulance
+      </h1>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_manage_fleet' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-ambulance"></i></span>
+            <span class="nav-text">Manage Fleet</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_add' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus-circle"></i></span>
+            <span class="nav-text">Add Ambulance</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_record_usage' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tachometer-alt"></i></span>
+            <span class="nav-text">Record Usage</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_view_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Add New Ambulance</h1>
+        <p>Register a new ambulance to the fleet</p>
+      </div>
+
+      <div class="form-container">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label for="reg_number">Registration Number *</label>
+            <input type="text" name="reg_number" id="reg_number" required placeholder="e.g., AAA 1234">
+          </div>
+
+          <div class="form-group">
+            <label for="model">Model</label>
+            <input type="text" name="model" id="model" placeholder="e.g., Toyota Hiace Ambulance">
+          </div>
+
+          <div class="form-group">
+            <label for="year">Year</label>
+            <input type="number" name="year" id="year" placeholder="2023">
+          </div>
+
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select name="status" id="status">
+              <option value="available">Available</option>
+              <option value="on_call">On Call</option>
+              <option value="maintenance">Under Maintenance</option>
+              <option value="out_of_service">Out of Service</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="current_mileage">Current Mileage (km)</label>
+            <input type="number" name="current_mileage" id="current_mileage" value="0">
+          </div>
+
+          <div class="form-group">
+            <label for="service_interval_mileage">Service Interval (km)</label>
+            <input type="number" name="service_interval_mileage" id="service_interval_mileage" placeholder="10000">
+          </div>
+
+          <div class="form-group">
+            <label for="base_location">Base Location</label>
+            <input type="text" name="base_location" id="base_location" placeholder="e.g., Harare Central">
+          </div>
+
+          <div class="form-group">
+            <label for="image">Ambulance Photo</label>
+            <input type="file" name="image" id="image" accept="image/*">
+          </div>
+
+          <div style="margin-top: 32px; display: flex; gap: 12px;">
+            <button type="submit" class="btn-submit">
+              <i class="fas fa-save"></i> Add
+            </button>
+            <a href="{% url 'fleet:ambulance_manage_fleet' %}" class="btn-cancel">
+              <i class="fas fa-times"></i> Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

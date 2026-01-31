@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  /* Ambulance Theme Colors */
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-secondary: #155a94;
+    --ambulance-light: #dbeafe;
+    --ambulance-hover: #155a94;
+    --ambulance-dark: #000;
+  }
+
+  /* Sidebar color overrides for ambulance theme */
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+    color: #000000 !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .alerts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .alert-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(28, 117, 188, 0.12);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .alert-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(28, 117, 188, 0.15);
+    border-color: rgba(28, 117, 188, 0.3);
+  }
+
+  .alert-card .alert-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    background: #ffffff;
+    border: 2px solid #000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .alert-card .alert-icon i {
+    font-size: 24px;
+    color: #000;
+  }
+
+  .alert-card {
+    cursor: pointer;
+  }
+
+  .alert-content h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 10px;
+  }
+
+  .alert-content p {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .management-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .management-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(28, 117, 188, 0.12);
+    transition: all 0.22s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .management-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(28, 117, 188, 0.15);
+    border-color: rgba(28, 117, 188, 0.3);
+  }
+
+  .management-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    border: 2px solid #000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .management-icon i {
+    font-size: 28px;
+    color: #000;
+  }
+
+  .management-content h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 12px;
+  }
+
+  .management-content p {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .stat-number {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ambulance-primary);
+  }
+
+  .stat-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        Ambulance Manager
+      </h1>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search ambulances..." class="search-input">
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="#" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-key"></i></span>
+              <span>Change Password</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_manage_fleet' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-ambulance"></i></span>
+            <span class="nav-text">Manage Fleet</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_add' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus-circle"></i></span>
+            <span class="nav-text">Add Ambulance</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_record_usage' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tachometer-alt"></i></span>
+            <span class="nav-text">Record Usage</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_view_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Welcome Back, {{ user_name }}!</h1>
+        <p>Ambulance fleet administration and management</p>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="management-sections" style="margin-top: 24px;">
+        <h2 class="section-title">Fleet Overview</h2>
+        <div class="management-grid">
+          <div class="management-card" data-href="{% url 'fleet:ambulance_manage_fleet' %}" role="button" tabindex="0">
+            <div class="management-icon">
+              <i class="fas fa-ambulance"></i>
+            </div>
+            <div class="management-content">
+              <h3>Total Ambulances</h3>
+              <p>Manage your entire ambulance fleet</p>
+              <div class="management-stats">
+                <span class="stat-number">{{ total_ambulances }}</span>
+                <span class="stat-label">Vehicles</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="management-card">
+            <div class="management-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="management-content">
+              <h3>Available Now</h3>
+              <p>Ready for deployment</p>
+              <div class="management-stats">
+                <span class="stat-number" style="color: #10b981;">{{ available_ambulances }}</span>
+                <span class="stat-label">Available</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="management-card">
+            <div class="management-icon">
+              <i class="fas fa-phone-volume"></i>
+            </div>
+            <div class="management-content">
+              <h3>On Call</h3>
+              <p>Currently responding</p>
+              <div class="management-stats">
+                <span class="stat-number" style="color: var(--ambulance-secondary);">{{ on_call }}</span>
+                <span class="stat-label">Active</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="management-card">
+            <div class="management-icon">
+              <i class="fas fa-wrench"></i>
+            </div>
+            <div class="management-content">
+              <h3>In Maintenance</h3>
+              <p>Under service/repair</p>
+              <div class="management-stats">
+                <span class="stat-number" style="color: #ef4444;">{{ in_maintenance }}</span>
+                <span class="stat-label">Vehicles</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="alerts-section">
+        <h2 class="section-title">System Notifications</h2>
+        <div class="alerts-grid">
+          {% if service_alerts %}
+          <div class="alert-card warning">
+            <div class="alert-icon">
+              <i class="fas fa-tools"></i>
+            </div>
+            <div class="alert-content">
+              <h3>Service Due</h3>
+              <p>{{ service_alerts|length }} ambulance{{ service_alerts|length|pluralize }} require{{ service_alerts|length|pluralize:"s," }} maintenance</p>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if pending_requests %}
+          <div class="alert-card info" data-href="#" role="button" tabindex="0">
+            <div class="alert-icon">
+              <i class="fas fa-clipboard-check"></i>
+            </div>
+            <div class="alert-content">
+              <h3>Pending Requests</h3>
+              <p>{{ pending_requests|length }} request{{ pending_requests|length|pluralize }} awaiting assignment</p>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="alert-card success" data-href="{% url 'fleet:ambulance_view_statistics' %}" role="button" tabindex="0">
+            <div class="alert-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="alert-content">
+              <h3>Usage Reports</h3>
+              <p>View detailed ambulance usage statistics</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Usage -->
+      {% if recent_usage %}
+      <div class="management-sections" style="margin-top: 32px;">
+        <h2 class="section-title">Recent Usage</h2>
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 2px solid #f3f4f6;">
+                <th style="text-align: left; padding: 12px; font-weight: 600; color: #6b7280;">Date</th>
+                <th style="text-align: left; padding: 12px; font-weight: 600; color: #6b7280;">Ambulance</th>
+                <th style="text-align: left; padding: 12px; font-weight: 600; color: #6b7280;">Purpose</th>
+                <th style="text-align: left; padding: 12px; font-weight: 600; color: #6b7280;">Distance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for usage in recent_usage %}
+              <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 12px;">{{ usage.date|date:"M d, Y" }}</td>
+                <td style="padding: 12px; font-weight: 600;">{{ usage.ambulance.reg_number }}</td>
+                <td style="padding: 12px;">{{ usage.purpose }}</td>
+                <td style="padding: 12px;">{{ usage.distance_covered }} km</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.alert-card[data-href], .management-card[data-href]').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var url = card.getAttribute('data-href');
+      if (url && url !== '#') window.location.href = url;
+    });
+  });
+});
+</script>
+{% endblock %}

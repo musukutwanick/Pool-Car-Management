@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="auth-wrapper ambulance-theme">
+  <div class="auth-card">
+    <div class="logos-card" style="margin-top:0;margin-bottom:18px;">
+      <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="logo-img"/>
+    </div>
+
+    <div class="ambulance-header">
+      <i class="fas fa-ambulance"></i>
+      <h1 class="login-title">Ambulance Manager</h1>
+    </div>
+    <p class="login-sub">Login to access ambulance fleet management</p>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-error">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" class="login-form">
+      {% csrf_token %}
+      <input type="text" name="username" class="form-input" placeholder="Enter your username or email" autocomplete="username" required>
+      <input type="password" name="password" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
+      <button type="submit" class="btn-primary ambulance-btn">Log in</button>
+    </form>
+    
+    <a href="{% url 'fleet:landing' %}" class="back-link">← Back to module selection</a>
+  </div>
+</section>
+
+<style>
+  .ambulance-theme .auth-card {
+    border-top: 4px solid #1c75bc;
+  }
+  
+  .ambulance-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .ambulance-header i {
+    font-size: 2rem;
+    color: #1c75bc;
+  }
+  
+  .ambulance-btn {
+    background: linear-gradient(135deg, #1c75bc, #155a94);
+  }
+  
+  .ambulance-btn:hover {
+    background: linear-gradient(135deg, #155a94, #0f4470);
+    transform: translateY(-2px);
+  }
+  
+  .back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: #000;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s;
+    font-weight: 500;
+  }
+  
+  .back-link:hover {
+    color: #1c75bc;
+  }
+</style>
+{% endblock %}

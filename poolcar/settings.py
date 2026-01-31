@@ -15,7 +15,7 @@ if env_file.exists():
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = env('SECRET_KEY', default='change-me-in-production')
-DEBUG = env('DEBUG')
+DEBUG = env('DEBUG', default=False)  # Default to False for production safety
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
@@ -39,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.gzip.GZipMiddleware',  # Compress responses for faster transfer
 ]
 
 ROOT_URLCONF = 'poolcar.urls'
@@ -64,6 +65,28 @@ WSGI_APPLICATION = 'poolcar.wsgi.application'
 DATABASES = {
     'default': env.db_url('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
 }
+
+# Database query optimization
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    DATABASES['default']['OPTIONS'] = {
+        'timeout': 20,
+    }
+
+# Caching configuration for better performance
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'poolcar-cache',
+        'TIMEOUT': 300,  # 5 minutes cache timeout
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000
+        }
+    }
+}
+
+# Query optimization settings
+ATOMIC_REQUESTS = False  # Set per-view for better control
+DATABASE_CONN_MAX_AGE = 600  # Reuse database connections
 
 AUTH_PASSWORD_VALIDATORS = []
 

@@ -8,7 +8,11 @@ from django.urls import reverse
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import Vehicle, CarRequest, HandoverChecklist, Profile, ServiceRecord
+from .models import (
+    Vehicle, CarRequest, HandoverChecklist, Profile, ServiceRecord,
+    Ambulance, AmbulanceEquipment, AmbulanceServiceRecord, 
+    AmbulanceUsageRecord, AmbulanceRequest
+)
 from .forms import (
     VehicleForm, DriverAssignmentForm, CarRequestApprovalForm, 
     MileageUpdateForm, HandoverChecklistReviewForm, HandoverCompletionForm, UserProfileForm,
@@ -90,10 +94,59 @@ def login_page(request):
     return render(request, 'login.html', {})
 
 
+def ambulance_login_page(request):
+    """Handle ambulance module login page and authentication."""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        # Try authenticating directly with the provided identifier
+        user = authenticate(request, username=username, password=password)
+
+        if user is None:
+            # If input looks like an email address, attempt email lookup
+            if username and '@' in username:
+                try:
+                    user_by_email = User.objects.filter(email__iexact=username).first()
+                    if user_by_email:
+                        user = authenticate(request, username=user_by_email.username, password=password)
+                except Exception:
+                    user = None
+
+        if user is not None:
+            # Check if user has access to ambulance module
+            try:
+                profile = user.profile
+                if profile.module not in ['ambulance', 'both']:
+                    messages.error(request, 'You do not have access to the Ambulance Manager module.')
+                    return render(request, 'ambulance_login.html', {})
+                
+                # Log the user in
+                login(request, user)
+                
+                # Redirect based on user role
+                if profile.role == 'ambulance_admin':
+                    return redirect('fleet:ambulance_admin_dashboard')
+                elif profile.role == 'nectacare_head':
+                    return redirect('fleet:nectacare_head_dashboard')
+                elif profile.role == 'ambulance_mis':
+                    return redirect('fleet:ambulance_mis_dashboard')
+                else:
+                    messages.error(request, 'Invalid role for Ambulance Manager module.')
+                    return render(request, 'ambulance_login.html', {})
+            except Profile.DoesNotExist:
+                messages.error(request, 'Profile not found. Please contact administrator.')
+                return render(request, 'ambulance_login.html', {})
+        else:
+            messages.error(request, 'Invalid username or password')
+    
+    return render(request, 'ambulance_login.html', {})
+
+
 @login_required
 def employee_dashboard(request):
     """Employee dashboard with sidebar navigation."""
-    # Redirect non-employees to their correct dashboard
+    # Redirect non-employees to their correct dashboard using select_related for single query
     try:
         profile = request.user.profile
         if profile.role == 'admin':
@@ -114,12 +167,13 @@ def employee_dashboard(request):
     except Profile.DoesNotExist:
         pass  # Continue to employee dashboard if no profile
     
-    # Get employee's recent requests
+    # Get employee's recent requests with assigned vehicle
     recent_requests = CarRequest.objects.filter(
         requester=request.user
-    ).order_by('-created_at')[:5]
+    ).select_related('assigned_vehicle').order_by('-created_at')[:5]
     
-    # Get available vehicles count
+    # Combine all vehicle count queries into a single query using annotations
+    from django.db.models import Q, Count
     available_vehicles = Vehicle.objects.filter(status='available').count()
     
     # Get pending requests count
@@ -202,23 +256,37 @@ def admin_dashboard(request):
     except Profile.DoesNotExist:
         return redirect('fleet:login_page')
 
+    # Optimize with aggregation to reduce queries
+    from django.db.models import Count, Q, Case, When, IntegerField
+    
     total_vehicles = Vehicle.objects.count()
     available_vehicles = Vehicle.objects.filter(status='available').count()
-    total_employees = User.objects.filter(profile__role='employee').count()
-    total_drivers = User.objects.filter(profile__role='driver').count()
+    
+    # Use single query with annotations instead of separate queries
+    user_counts = User.objects.aggregate(
+        total_employees=Count('id', filter=Q(profile__role='employee')),
+        total_drivers=Count('id', filter=Q(profile__role='driver'))
+    )
+    total_employees = user_counts['total_employees']
+    total_drivers = user_counts['total_drivers']
+    
     assigned_vehicles = Vehicle.objects.filter(status='booked').count()
     fleet_utilization = round((assigned_vehicles / total_vehicles * 100), 1) if total_vehicles > 0 else 0
-    pending_requests = CarRequest.objects.filter(status='pending').count()
-    # Count approved requests awaiting assignment for admin dashboard alert
-    approved_requests = CarRequest.objects.filter(
-        status='approved',
-        assigned_vehicle__isnull=True
-    ).count()
+    
+    # Use single request aggregation
+    request_stats = CarRequest.objects.aggregate(
+        pending=Count('id', filter=Q(status='pending')),
+        approved_unassigned=Count('id', filter=Q(status='approved', assigned_vehicle__isnull=True))
+    )
+    pending_requests = request_stats['pending']
+    approved_requests = request_stats['approved_unassigned']
+    
     pending_handovers = HandoverChecklist.objects.filter(reviewed_by__isnull=True).count()
     maintenance_due = Vehicle.objects.filter(status='maintenance').count()
+    
     week_ago = timezone.now() - timedelta(days=7)
-    recent_requests = CarRequest.objects.filter(created_at__gte=week_ago).order_by('-created_at')[:5]
-    recent_handovers = HandoverChecklist.objects.filter(submitted_at__gte=week_ago).order_by('-submitted_at')[:3]
+    recent_requests = CarRequest.objects.filter(created_at__gte=week_ago).select_related('requester', 'assigned_vehicle').order_by('-created_at')[:5]
+    recent_handovers = HandoverChecklist.objects.filter(submitted_at__gte=week_ago).select_related('request', 'request__requester', 'request__assigned_vehicle').order_by('-submitted_at')[:3]
 
     user_name = (request.user.get_full_name() or request.user.username).strip()
     user_role = 'Administrator'
@@ -241,8 +309,6 @@ def admin_dashboard(request):
         'recent_handovers': recent_handovers
     }
     return render(request, 'admin/dashboard.html', context)
-
-
 @login_required
 def gm_cellmed_dashboard(request):
     """GM dashboard for Cellmed division (dynamic user name)."""
@@ -3309,3 +3375,438 @@ def upload_service_excel(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error processing file: {str(e)}'})
+
+
+# ============================================
+# AMBULANCE MANAGER VIEWS
+# ============================================
+
+@login_required
+def ambulance_admin_dashboard(request):
+    """Ambulance Admin dashboard - main control center."""
+    # Check authorization
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin' or profile.module not in ['ambulance', 'both']:
+            return unauthorized_response(request, 'You do not have access to the Ambulance Admin dashboard.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get statistics
+    total_ambulances = Ambulance.objects.count()
+    available_ambulances = Ambulance.objects.filter(status='available').count()
+    on_call = Ambulance.objects.filter(status='on_call').count()
+    in_maintenance = Ambulance.objects.filter(status='maintenance').count()
+    
+    # Recent ambulances
+    recent_ambulances = Ambulance.objects.all().order_by('-created_at')[:5]
+    
+    # Service due alerts
+    ambulances_needing_service = Ambulance.objects.filter(
+        service_interval_mileage__isnull=False
+    ).exclude(status='out_of_service')
+    
+    service_alerts = []
+    for amb in ambulances_needing_service:
+        if amb.is_service_due:
+            service_alerts.append(amb)
+    
+    # Recent usage records
+    recent_usage = AmbulanceUsageRecord.objects.select_related('ambulance', 'driver').order_by('-date')[:10]
+    
+    # Pending requests (if applicable)
+    pending_requests = AmbulanceRequest.objects.filter(status='pending').order_by('-created_at')[:5]
+    
+    context = {
+        'total_ambulances': total_ambulances,
+        'available_ambulances': available_ambulances,
+        'on_call': on_call,
+        'in_maintenance': in_maintenance,
+        'recent_ambulances': recent_ambulances,
+        'service_alerts': service_alerts,
+        'recent_usage': recent_usage,
+        'pending_requests': pending_requests,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/admin_dashboard.html', context)
+
+
+@login_required
+def nectacare_head_dashboard(request):
+    """Nectacare Head dashboard - read-only view with reports and approval."""
+    # Check authorization
+    try:
+        profile = request.user.profile
+        if profile.role != 'nectacare_head' or profile.module not in ['ambulance', 'both']:
+            return unauthorized_response(request, 'You do not have access to the Nectacare Head dashboard.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get statistics
+    total_ambulances = Ambulance.objects.count()
+    available_ambulances = Ambulance.objects.filter(status='available').count()
+    on_call = Ambulance.objects.filter(status='on_call').count()
+    
+    # Recent ambulances with status
+    recent_ambulances = Ambulance.objects.all().order_by('-updated_at')[:10]
+    
+    # Service history
+    recent_services = AmbulanceServiceRecord.objects.select_related('ambulance').order_by('-service_date')[:10]
+    
+    # Usage reports
+    from django.db.models import Sum, Avg, Count, F
+    from django.utils import timezone
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    
+    usage_stats = AmbulanceUsageRecord.objects.filter(date__gte=thirty_days_ago).aggregate(
+        total_distance=Sum(F('end_mileage') - F('start_mileage')),
+        total_trips=Count('id'),
+        total_fuel_cost=Sum('fuel_cost')
+    )
+    
+    # Pending approval requests
+    pending_requests = AmbulanceRequest.objects.filter(status='pending').order_by('-created_at')
+    
+    context = {
+        'total_ambulances': total_ambulances,
+        'available_ambulances': available_ambulances,
+        'on_call': on_call,
+        'recent_ambulances': recent_ambulances,
+        'recent_services': recent_services,
+        'usage_stats': usage_stats,
+        'pending_requests': pending_requests,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/nectacare_head_dashboard.html', context)
+
+
+@login_required
+def ambulance_manage_fleet(request):
+    """Manage ambulance fleet - list all ambulances."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    ambulances = Ambulance.objects.all().order_by('reg_number')
+    
+    context = {
+        'ambulances': ambulances,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/manage_fleet.html', context)
+
+
+@login_required
+def ambulance_add(request):
+    """Add a new ambulance."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    if request.method == 'POST':
+        # Handle form submission
+        reg_number = request.POST.get('reg_number')
+        model = request.POST.get('model')
+        year = request.POST.get('year')
+        status = request.POST.get('status', 'available')
+        service_interval = request.POST.get('service_interval_mileage')
+        current_mileage = request.POST.get('current_mileage', 0)
+        base_location = request.POST.get('base_location')
+        
+        try:
+            ambulance = Ambulance.objects.create(
+                reg_number=reg_number,
+                model=model,
+                year=year if year else None,
+                status=status,
+                service_interval_mileage=service_interval if service_interval else None,
+                current_mileage=current_mileage if current_mileage else 0,
+                base_location=base_location
+            )
+            
+            # Handle image upload
+            if request.FILES.get('image'):
+                ambulance.image = request.FILES['image']
+                ambulance.save()
+            
+            messages.success(request, f'Ambulance {reg_number} added successfully!')
+            return redirect('fleet:ambulance_manage_fleet')
+        except Exception as e:
+            messages.error(request, f'Error adding ambulance: {str(e)}')
+    
+    context = {
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/add_ambulance.html', context)
+
+
+@login_required
+def ambulance_assign_driver(request):
+    """Assign a driver to an ambulance for deployment."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    if request.method == 'POST':
+        ambulance_id = request.POST.get('ambulance_id')
+        driver_name = request.POST.get('driver_name')
+        driver_phone = request.POST.get('driver_phone')
+        opening_mileage = request.POST.get('opening_mileage')
+        purpose = request.POST.get('purpose')
+        
+        try:
+            ambulance = Ambulance.objects.get(id=ambulance_id)
+            
+            # Update ambulance to "on_call" status
+            ambulance.status = 'on_call'
+            ambulance.save()
+            
+            # Create a usage record with opening mileage
+            AmbulanceUsageRecord.objects.create(
+                ambulance=ambulance,
+                driver=request.user,
+                purpose=purpose,
+                start_mileage=opening_mileage,
+                driver_name=driver_name,
+                driver_phone=driver_phone
+            )
+            
+            messages.success(request, f'Driver "{driver_name}" assigned to {ambulance.reg_number}. Ambulance marked as On Call.')
+            return redirect('fleet:ambulance_record_usage')
+        except Exception as e:
+            messages.error(request, f'Error assigning driver: {str(e)}')
+            return redirect('fleet:ambulance_record_usage')
+    
+    return redirect('fleet:ambulance_record_usage')
+
+
+def ambulance_record_usage(request):
+    """Record ambulance usage and closing mileage upon return."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    if request.method == 'POST':
+        ambulance_id = request.POST.get('ambulance_id')
+        closing_mileage = request.POST.get('closing_mileage')
+        fuel_added = request.POST.get('fuel_added')
+        fuel_cost = request.POST.get('fuel_cost')
+        notes = request.POST.get('notes')
+        
+        try:
+            ambulance = Ambulance.objects.get(id=ambulance_id)
+            
+            # Get the latest active usage record for this ambulance
+            usage_record = AmbulanceUsageRecord.objects.filter(
+                ambulance=ambulance,
+                end_mileage__isnull=True
+            ).latest('created_at')
+            
+            # Update the usage record with closing mileage
+            usage_record.end_mileage = closing_mileage
+            usage_record.fuel_added = fuel_added if fuel_added else None
+            usage_record.fuel_cost = fuel_cost if fuel_cost else None
+            usage_record.notes = notes if notes else None
+            usage_record.save()
+            
+            # Update ambulance mileage and status back to available
+            ambulance.current_mileage = closing_mileage
+            ambulance.status = 'available'
+            ambulance.save()
+            
+            # Handle receipt upload
+            if request.FILES.get('fuel_receipt'):
+                usage_record.fuel_receipt = request.FILES['fuel_receipt']
+                usage_record.save()
+            
+            messages.success(request, 'Usage record updated successfully! Ambulance marked as Available.')
+            return redirect('fleet:ambulance_admin_dashboard')
+        except AmbulanceUsageRecord.DoesNotExist:
+            messages.error(request, 'No active trip found for this ambulance. Please assign a driver first.')
+            return redirect('fleet:ambulance_record_usage')
+        except Exception as e:
+            messages.error(request, f'Error recording usage: {str(e)}')
+            return redirect('fleet:ambulance_record_usage')
+    
+    ambulances = Ambulance.objects.all().order_by('reg_number')
+    
+    context = {
+        'ambulances': ambulances,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/record_usage.html', context)
+
+
+@login_required
+def ambulance_view_statistics(request):
+    """View ambulance usage statistics and reports."""
+    try:
+        profile = request.user.profile
+        if profile.role not in ['ambulance_admin', 'nectacare_head']:
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    from django.db.models import Sum, Avg, Count, F
+    from django.utils import timezone
+    
+    # Calculate statistics for different time periods
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    ninety_days_ago = timezone.now() - timedelta(days=90)
+    
+    # Monthly statistics
+    monthly_stats = AmbulanceUsageRecord.objects.filter(date__gte=thirty_days_ago).aggregate(
+        total_trips=Count('id'),
+        total_distance=Sum(F('end_mileage') - F('start_mileage')),
+        total_fuel_cost=Sum('fuel_cost'),
+        avg_distance=Avg(F('end_mileage') - F('start_mileage'))
+    )
+    
+    # Quarterly statistics
+    quarterly_stats = AmbulanceUsageRecord.objects.filter(date__gte=ninety_days_ago).aggregate(
+        total_trips=Count('id'),
+        total_distance=Sum(F('end_mileage') - F('start_mileage')),
+        total_fuel_cost=Sum('fuel_cost')
+    )
+    
+    # Per-ambulance breakdown
+    ambulance_breakdown = Ambulance.objects.annotate(
+        total_trips=Count('usage_records'),
+        total_distance=Sum(F('usage_records__end_mileage') - F('usage_records__start_mileage'))
+    ).order_by('-total_trips')
+    
+    context = {
+        'monthly_stats': monthly_stats,
+        'quarterly_stats': quarterly_stats,
+        'ambulance_breakdown': ambulance_breakdown,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/statistics.html', context)
+
+
+@login_required
+def ambulance_mis_dashboard(request):
+    """Ambulance MIS Admin dashboard - user and driver management for ambulance module."""
+    # Check authorization
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis' or profile.module not in ['ambulance', 'both']:
+            return unauthorized_response(request, 'You do not have access to the Ambulance MIS Admin dashboard.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get statistics for display
+    total_users = User.objects.filter(
+        profile__role__in=['ambulance_admin', 'nectacare_head', 'ambulance_mis'],
+        profile__module__in=['ambulance', 'both']
+    ).count()
+    
+    total_ambulances = Ambulance.objects.count()
+    total_drivers = User.objects.filter(profile__is_dedicated_driver=True, profile__module='ambulance').count()
+    
+    # Recent users
+    recent_users = User.objects.filter(
+        profile__module__in=['ambulance', 'both']
+    ).select_related('profile').order_by('-date_joined')[:10]
+    
+    context = {
+        'total_users': total_users,
+        'total_ambulances': total_ambulances,
+        'total_drivers': total_drivers,
+        'recent_users': recent_users,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_dashboard.html', context)
+
+
+@login_required
+def ambulance_mis_manage_users(request):
+    """Manage ambulance module users."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get all ambulance module users
+    users = User.objects.filter(
+        profile__module__in=['ambulance', 'both']
+    ).select_related('profile').order_by('username')
+    
+    context = {
+        'users': users,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_manage_users.html', context)
+
+
+@login_required
+def ambulance_mis_add_user(request):
+    """Add a new ambulance module user."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        password = request.POST.get('password')
+        role = request.POST.get('role')
+        module = request.POST.get('module', 'ambulance')
+        
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+            
+            # Create profile
+            Profile.objects.create(
+                user=user,
+                role=role,
+                module=module,
+                subsidiary='nectacare'
+            )
+            
+            messages.success(request, f'User {username} created successfully!')
+            return redirect('fleet:ambulance_mis_manage_users')
+        except Exception as e:
+            messages.error(request, f'Error creating user: {str(e)}')
+    
+    context = {
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_add_user.html', context)
+
+
