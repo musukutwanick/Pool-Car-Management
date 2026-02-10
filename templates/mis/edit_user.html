@@ -68,8 +68,8 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Username</label>
-                <input type="text" value="{{ edit_user.username }}" class="form-control" disabled>
-                <small class="form-help">Username cannot be changed</small>
+                <input type="text" name="username" value="{{ edit_user.username }}" class="form-control" required>
+                <small class="form-help">Update the login username for this user</small>
               </div>
             </div>
 

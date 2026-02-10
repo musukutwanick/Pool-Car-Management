@@ -105,4 +105,16 @@ urlpatterns = [
     path('ambulance/statistics/', views.ambulance_view_statistics, name='ambulance_view_statistics'),
     path('ambulance/mis/users/manage/', views.ambulance_mis_manage_users, name='ambulance_mis_manage_users'),
     path('ambulance/mis/users/add/', views.ambulance_mis_add_user, name='ambulance_mis_add_user'),
+    path('ambulance/mis/users/<int:user_id>/reset-password/', views.ambulance_mis_reset_password, name='ambulance_mis_reset_password'),
+    path('ambulance/mis/users/<int:user_id>/edit/', views.ambulance_mis_edit_user, name='ambulance_mis_edit_user'),
+    path('ambulance/mis/drivers/manage/', views.ambulance_mis_manage_drivers, name='ambulance_mis_manage_drivers'),
+    path('ambulance/mis/drivers/add/', views.ambulance_mis_add_driver, name='ambulance_mis_add_driver'),
+    path('ambulance/mis/logs/', views.ambulance_mis_view_logs, name='ambulance_mis_view_logs'),
+    
+    # Ambulance Handover
+    path('ambulance/handover/', views.ambulance_handover_checklist, name='ambulance_handover_checklist'),
+    path('ambulance/handover/<int:trip_id>/', views.ambulance_handover_detail, name='ambulance_handover_detail'),
+    
+    # Ambulance Service
+    path('ambulance/service/schedule/', views.ambulance_service_schedule, name='ambulance_service_schedule'),
 ]

@@ -163,6 +163,24 @@
             <span class="nav-text">Add User</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_manage_drivers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+            <span class="nav-text">Manage Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_add_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-md"></i></span>
+            <span class="nav-text">Add Driver</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_view_logs' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">System Logs</span>
+          </a>
+        </li>
       </ul>
     </div>
   </nav>

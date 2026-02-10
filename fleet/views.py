@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse
+import re
 from django.urls import reverse
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -11,7 +12,7 @@ from datetime import datetime, timedelta
 from .models import (
     Vehicle, CarRequest, HandoverChecklist, Profile, ServiceRecord,
     Ambulance, AmbulanceEquipment, AmbulanceServiceRecord, 
-    AmbulanceUsageRecord, AmbulanceRequest
+    AmbulanceUsageRecord, AmbulanceRequest, AmbulanceHandoverChecklist
 )
 from .forms import (
     VehicleForm, DriverAssignmentForm, CarRequestApprovalForm, 
@@ -1189,6 +1190,15 @@ def mis_edit_user(request, user_id):
     
     if request.method == 'POST':
         # Handle user info update
+        new_username = (request.POST.get('username') or '').strip()
+        if not new_username:
+            messages.error(request, 'Username is required.')
+            return redirect('fleet:mis_edit_user', user_id=user.id)
+        if new_username != user.username and User.objects.filter(username=new_username).exists():
+            messages.error(request, 'Username is already taken.')
+            return redirect('fleet:mis_edit_user', user_id=user.id)
+
+        user.username = new_username
         user.first_name = request.POST.get('first_name')
         user.last_name = request.POST.get('last_name')
         user.email = request.POST.get('email')
@@ -1685,9 +1695,19 @@ def assign_vehicle_to_request(request, request_id):
             vehicle.status = 'booked'
             vehicle.save()
             
+            # Create a pickup checklist for this assignment
+            HandoverChecklist.objects.get_or_create(
+                request=car_request,
+                checklist_type='pickup',
+                defaults={
+                    'approval_status': 'pending',
+                    'mileage_kms': vehicle.current_mileage if vehicle.current_mileage else None
+                }
+            )
+            
             # Email notification is automatically sent by signals
 
-            messages.success(request, f'Vehicle {vehicle.reg_number} assigned to request #{car_request.request_code} successfully!')
+            messages.success(request, f'Vehicle {vehicle.reg_number} assigned to request #{car_request.request_code} successfully! Employee must complete pickup checklist before use.')
         except Vehicle.DoesNotExist:
             messages.error(request, 'Selected vehicle is not available.')
     
@@ -2440,13 +2460,16 @@ def employee_handover_checklist(request, request_id=None):
         car_request = get_object_or_404(CarRequest, id=request_id, requester=request.user)
         # Check if there's an existing handover (for editing rejected ones)
         try:
-            handover_to_edit = HandoverChecklist.objects.get(request=car_request)
+            handover_to_edit = HandoverChecklist.objects.get(request=car_request, checklist_type='return')
         except HandoverChecklist.DoesNotExist:
             pass
     
     if request.method == 'POST' and car_request:
-        # Create or update handover checklist with all new fields
-        handover, created = HandoverChecklist.objects.get_or_create(request=car_request)
+        # Create or update handover checklist
+        handover, created = HandoverChecklist.objects.get_or_create(
+            request=car_request,
+            checklist_type='return'
+        )
         
         # Basic fields
         handover.fuel_level = request.POST.get('fuel_level', '')
@@ -2549,8 +2572,19 @@ def employee_handover_checklist(request, request_id=None):
     # For each assigned vehicle, check if handover already exists and add to context
     assigned_vehicles_with_status = []
     for av in assigned_vehicles:
+        previous_handover = (
+            HandoverChecklist.objects.filter(
+                request__assigned_vehicle=av.assigned_vehicle,
+                checklist_type='return',
+                submitted_at__isnull=False
+            )
+            .exclude(request=av)
+            .select_related('request', 'request__requester')
+            .order_by('-submitted_at')
+            .first()
+        )
         try:
-            existing_handover = HandoverChecklist.objects.get(request=av)
+            existing_handover = HandoverChecklist.objects.get(request=av, checklist_type='return')
             # Only show form if rejected or not yet submitted
             can_submit = existing_handover.approval_status == 'rejected' or existing_handover.submitted_at is None
             assigned_vehicles_with_status.append({
@@ -2558,7 +2592,8 @@ def employee_handover_checklist(request, request_id=None):
                 'has_handover': True,
                 'can_submit': can_submit,
                 'handover_status': existing_handover.approval_status,
-                'handover': existing_handover
+                'handover': existing_handover,
+                'previous_handover': previous_handover
             })
         except HandoverChecklist.DoesNotExist:
             # No handover exists yet - show form
@@ -2567,7 +2602,8 @@ def employee_handover_checklist(request, request_id=None):
                 'has_handover': False,
                 'can_submit': True,
                 'handover_status': None,
-                'handover': None
+                'handover': None,
+                'previous_handover': previous_handover
             })
     
     # Get handover history (submitted handovers)
@@ -2607,6 +2643,124 @@ def employee_handover_checklist(request, request_id=None):
         'pending_approval_count': pending_approval_count
     }
     return render(request, 'employee/handover_checklist.html', context)
+
+
+@login_required
+def employee_pickup_checklist(request, request_id):
+    """Employee pickup checklist form - filled out before taking the vehicle."""
+    car_request = get_object_or_404(CarRequest, id=request_id, requester=request.user)
+    
+    # Check if car request has assigned vehicle
+    if not car_request.assigned_vehicle:
+        messages.error(request, 'No vehicle assigned to this request yet.')
+        return redirect('fleet:employee_dashboard')
+    
+    # Get or create pickup checklist
+    pickup_checklist, created = HandoverChecklist.objects.get_or_create(
+        request=car_request,
+        checklist_type='pickup',
+        defaults={'approval_status': 'pending'}
+    )
+    
+    # Check if already submitted
+    if pickup_checklist.submitted_at and request.method != 'POST':
+        messages.info(request, 'Pickup checklist already submitted.')
+        return redirect('fleet:employee_dashboard')
+    
+    if request.method == 'POST':
+        # Save all checklist fields
+        pickup_checklist.fuel_level = request.POST.get('fuel_level', '')
+        pickup_checklist.mileage_kms = request.POST.get('mileage_kms')
+        pickup_checklist.fuel_reading = request.POST.get('fuel_reading', '')
+        pickup_checklist.scratches_dents = request.POST.get('scratches_dents', '')
+        pickup_checklist.additional_comments = request.POST.get('additional_comments', '')
+        
+        # Detailed checklist items
+        pickup_checklist.alarm_system_functional = request.POST.get('alarm_system_functional')
+        pickup_checklist.alarm_system_comments = request.POST.get('alarm_system_comments', '')
+        pickup_checklist.lock_nuts_spanner = request.POST.get('lock_nuts_spanner')
+        pickup_checklist.lock_nuts_spanner_comments = request.POST.get('lock_nuts_spanner_comments', '')
+        pickup_checklist.spare_wheel_hatchet = request.POST.get('spare_wheel_hatchet')
+        pickup_checklist.spare_wheel_hatchet_comments = request.POST.get('spare_wheel_hatchet_comments', '')
+        pickup_checklist.seat_belts_functioning = request.POST.get('seat_belts_functioning')
+        pickup_checklist.seat_belts_comments = request.POST.get('seat_belts_comments', '')
+        pickup_checklist.hand_brake_functioning = request.POST.get('hand_brake_functioning')
+        pickup_checklist.hand_brake_comments = request.POST.get('hand_brake_comments', '')
+        pickup_checklist.view_mirrors_functioning = request.POST.get('view_mirrors_functioning')
+        pickup_checklist.view_mirrors_comments = request.POST.get('view_mirrors_comments', '')
+        pickup_checklist.vehicle_insurance_disk = request.POST.get('vehicle_insurance_disk')
+        pickup_checklist.vehicle_insurance_disk_comments = request.POST.get('vehicle_insurance_disk_comments', '')
+        pickup_checklist.aa_zimbabwe_card = request.POST.get('aa_zimbabwe_card')
+        pickup_checklist.aa_zimbabwe_card_comments = request.POST.get('aa_zimbabwe_card_comments', '')
+        pickup_checklist.vehicle_licence_disk = request.POST.get('vehicle_licence_disk')
+        pickup_checklist.vehicle_licence_disk_comments = request.POST.get('vehicle_licence_disk_comments', '')
+        pickup_checklist.brake_lights_functioning = request.POST.get('brake_lights_functioning')
+        pickup_checklist.brake_lights_comments = request.POST.get('brake_lights_comments', '')
+        pickup_checklist.indicators_functioning = request.POST.get('indicators_functioning')
+        pickup_checklist.indicators_comments = request.POST.get('indicators_comments', '')
+        pickup_checklist.park_lights_functioning = request.POST.get('park_lights_functioning')
+        pickup_checklist.park_lights_comments = request.POST.get('park_lights_comments', '')
+        pickup_checklist.spare_wheel = request.POST.get('spare_wheel')
+        pickup_checklist.spare_wheel_comments = request.POST.get('spare_wheel_comments', '')
+        pickup_checklist.jack = request.POST.get('jack')
+        pickup_checklist.jack_comments = request.POST.get('jack_comments', '')
+        pickup_checklist.wheel_spanner = request.POST.get('wheel_spanner')
+        pickup_checklist.wheel_spanner_comments = request.POST.get('wheel_spanner_comments', '')
+        pickup_checklist.tool_box = request.POST.get('tool_box')
+        pickup_checklist.tool_box_comments = request.POST.get('tool_box_comments', '')
+        pickup_checklist.wheel_covers = request.POST.get('wheel_covers')
+        pickup_checklist.wheel_covers_comments = request.POST.get('wheel_covers_comments', '')
+        pickup_checklist.seat_covers = request.POST.get('seat_covers')
+        pickup_checklist.seat_covers_comments = request.POST.get('seat_covers_comments', '')
+        pickup_checklist.reflectors_installed = request.POST.get('reflectors_installed')
+        pickup_checklist.reflectors_installed_comments = request.POST.get('reflectors_installed_comments', '')
+        pickup_checklist.car_radio = request.POST.get('car_radio')
+        pickup_checklist.car_radio_comments = request.POST.get('car_radio_comments', '')
+        pickup_checklist.floor_mats = request.POST.get('floor_mats')
+        pickup_checklist.floor_mats_comments = request.POST.get('floor_mats_comments', '')
+        
+        # Handle file uploads
+        if request.FILES.get('checklist_document'):
+            pickup_checklist.checklist_document = request.FILES['checklist_document']
+        if request.FILES.get('additional_photo1'):
+            pickup_checklist.additional_photo1 = request.FILES['additional_photo1']
+        if request.FILES.get('additional_photo2'):
+            pickup_checklist.additional_photo2 = request.FILES['additional_photo2']
+        if request.FILES.get('additional_photo3'):
+            pickup_checklist.additional_photo3 = request.FILES['additional_photo3']
+        
+        # Set submission timestamp
+        pickup_checklist.submitted_at = timezone.now()
+        pickup_checklist.approval_status = 'approved'  # Auto-approve pickup checklists
+        pickup_checklist.save()
+        
+        messages.success(request, f'Pickup checklist for {car_request.assigned_vehicle.reg_number} submitted successfully! You can now use the vehicle.')
+        return redirect('fleet:employee_dashboard')
+    
+    # Check if profile exists (for manager check)
+    is_manager = False
+    if hasattr(request.user, 'profile'):
+        is_manager = request.user.profile.employee_type == 'MANAGER'
+    
+    pending_approval_count = 0
+    if is_manager:
+        pending_approval_count = CarRequest.objects.filter(
+            selected_supervisor=request.user,
+            supervisor_approved_by__isnull=True,
+            status='pending'
+        ).count()
+    
+    context = {
+        'car_request': car_request,
+        'pickup_checklist': pickup_checklist,
+        'vehicle': car_request.assigned_vehicle,
+        'user': request.user,
+        'user_name': request.user.get_full_name() or request.user.username,
+        'user_role': 'Employee',
+        'is_manager': is_manager,
+        'pending_approval_count': pending_approval_count
+    }
+    return render(request, 'employee/pickup_checklist.html', context)
 
 
 # ============================================
@@ -3494,8 +3648,14 @@ def ambulance_manage_fleet(request):
     
     ambulances = Ambulance.objects.all().order_by('reg_number')
     
+    # Fetch all ambulance usage records (assignments)
+    assignments = AmbulanceUsageRecord.objects.select_related(
+        'ambulance', 'driver'
+    ).order_by('-date', '-created_at')[:50]  # Show last 50 assignments
+    
     context = {
         'ambulances': ambulances,
+        'assignments': assignments,
         'user_name': request.user.get_full_name() or request.user.username,
     }
     
@@ -3562,13 +3722,16 @@ def ambulance_assign_driver(request):
     
     if request.method == 'POST':
         ambulance_id = request.POST.get('ambulance_id')
-        driver_name = request.POST.get('driver_name')
-        driver_phone = request.POST.get('driver_phone')
+        driver_id = request.POST.get('driver_id')
         opening_mileage = request.POST.get('opening_mileage')
         purpose = request.POST.get('purpose')
         
         try:
             ambulance = Ambulance.objects.get(id=ambulance_id)
+            driver = User.objects.get(id=driver_id)
+            
+            # Get driver's full name
+            driver_name = driver.get_full_name() or driver.username
             
             # Update ambulance to "on_call" status
             ambulance.status = 'on_call'
@@ -3577,11 +3740,11 @@ def ambulance_assign_driver(request):
             # Create a usage record with opening mileage
             AmbulanceUsageRecord.objects.create(
                 ambulance=ambulance,
-                driver=request.user,
+                driver=driver,
                 purpose=purpose,
                 start_mileage=opening_mileage,
                 driver_name=driver_name,
-                driver_phone=driver_phone
+                driver_phone=''
             )
             
             messages.success(request, f'Driver "{driver_name}" assigned to {ambulance.reg_number}. Ambulance marked as On Call.')
@@ -3646,8 +3809,16 @@ def ambulance_record_usage(request):
     
     ambulances = Ambulance.objects.all().order_by('reg_number')
     
+    # Get all ambulance drivers
+    drivers = User.objects.filter(
+        profile__role='driver',
+        profile__module__in=['ambulance', 'both'],
+        profile__is_dedicated_driver=True
+    ).select_related('profile').order_by('first_name', 'last_name')
+    
     context = {
         'ambulances': ambulances,
+        'drivers': drivers,
         'user_name': request.user.get_full_name() or request.user.username,
     }
     
@@ -3666,6 +3837,8 @@ def ambulance_view_statistics(request):
     
     from django.db.models import Sum, Avg, Count, F
     from django.utils import timezone
+    from datetime import timedelta
+    import json
     
     # Calculate statistics for different time periods
     thirty_days_ago = timezone.now() - timedelta(days=30)
@@ -3685,6 +3858,43 @@ def ambulance_view_statistics(request):
         total_distance=Sum(F('end_mileage') - F('start_mileage')),
         total_fuel_cost=Sum('fuel_cost')
     )
+
+    # Monthly trends (last 6 months)
+    monthly_data = []
+    monthly_labels = []
+    today = timezone.now().date()
+    for i in range(5, -1, -1):
+        month_start = (today.replace(day=1) - timedelta(days=30 * i)).replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1)
+        count = AmbulanceUsageRecord.objects.filter(date__gte=month_start, date__lt=month_end).count()
+        monthly_data.append(count)
+        monthly_labels.append(month_start.strftime('%b %Y'))
+
+    # Daily activity (last 30 days)
+    daily_labels = []
+    daily_data = []
+    for i in range(29, -1, -1):
+        day = today - timedelta(days=i)
+        daily_labels.append(day.strftime('%d %b'))
+        daily_data.append(AmbulanceUsageRecord.objects.filter(date=day).count())
+
+    # Ambulance status distribution
+    status_counts = list(Ambulance.objects.values('status').annotate(count=Count('id')))
+    status_label_map = dict(Ambulance.STATUS_CHOICES)
+    status_labels = [status_label_map.get(item['status'], item['status']) for item in status_counts]
+    status_data = [item['count'] for item in status_counts]
+
+    # Trip purpose distribution (top 5 + other)
+    purpose_counts = list(
+        AmbulanceUsageRecord.objects.values('purpose').annotate(count=Count('id')).order_by('-count')
+    )
+    top_purposes = purpose_counts[:5]
+    other_count = sum(item['count'] for item in purpose_counts[5:])
+    purpose_labels = [item['purpose'] or 'Other' for item in top_purposes]
+    purpose_data = [item['count'] for item in top_purposes]
+    if other_count:
+        purpose_labels.append('Other')
+        purpose_data.append(other_count)
     
     # Per-ambulance breakdown
     ambulance_breakdown = Ambulance.objects.annotate(
@@ -3696,6 +3906,14 @@ def ambulance_view_statistics(request):
         'monthly_stats': monthly_stats,
         'quarterly_stats': quarterly_stats,
         'ambulance_breakdown': ambulance_breakdown,
+        'monthly_chart_data': json.dumps(monthly_data),
+        'monthly_chart_labels': json.dumps(monthly_labels),
+        'daily_chart_data': json.dumps(daily_data),
+        'daily_chart_labels': json.dumps(daily_labels),
+        'status_chart_data': json.dumps(status_data),
+        'status_chart_labels': json.dumps(status_labels),
+        'purpose_chart_data': json.dumps(purpose_data),
+        'purpose_chart_labels': json.dumps(purpose_labels),
         'user_name': request.user.get_full_name() or request.user.username,
     }
     
@@ -3748,9 +3966,11 @@ def ambulance_mis_manage_users(request):
     except Profile.DoesNotExist:
         return unauthorized_response(request, 'Profile not found.')
     
-    # Get all ambulance module users
+    # Get all ambulance module users (excluding drivers)
     users = User.objects.filter(
         profile__module__in=['ambulance', 'both']
+    ).exclude(
+        profile__role='driver'
     ).select_related('profile').order_by('username')
     
     context = {
@@ -3810,3 +4030,469 @@ def ambulance_mis_add_user(request):
     return render(request, 'ambulance/mis_add_user.html', context)
 
 
+@login_required
+def ambulance_mis_reset_password(request, user_id):
+    """Reset password for an ambulance module user."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    try:
+        target_user = User.objects.get(id=user_id, profile__module__in=['ambulance', 'both'])
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('fleet:ambulance_mis_manage_users')
+    
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if new_password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+        elif len(new_password) < 6:
+            messages.error(request, 'Password must be at least 6 characters.')
+        else:
+            target_user.set_password(new_password)
+            target_user.save()
+            messages.success(request, f'Password reset successfully for {target_user.username}!')
+            return redirect('fleet:ambulance_mis_manage_users')
+    
+    context = {
+        'target_user': target_user,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_reset_password.html', context)
+
+
+@login_required
+def ambulance_mis_edit_user(request, user_id):
+    """Edit an existing ambulance module user."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    try:
+        user = User.objects.get(id=user_id, profile__module__in=['ambulance', 'both'])
+        user_profile = user.profile
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('fleet:ambulance_mis_manage_users')
+    
+    if request.method == 'POST':
+        # Handle user info update
+        new_username = (request.POST.get('username') or '').strip()
+        if not new_username:
+            messages.error(request, 'Username is required.')
+            return redirect('fleet:ambulance_mis_edit_user', user_id=user.id)
+        if new_username != user.username and User.objects.filter(username=new_username).exists():
+            messages.error(request, 'Username is already taken.')
+            return redirect('fleet:ambulance_mis_edit_user', user_id=user.id)
+
+        user.username = new_username
+        user.first_name = request.POST.get('first_name')
+        user.last_name = request.POST.get('last_name')
+        user.email = request.POST.get('email')
+        user.save()
+        
+        # Handle profile update
+        user_profile.role = request.POST.get('role')
+        user_profile.module = request.POST.get('module', 'ambulance')
+        user_profile.save()
+        
+        messages.success(request, f'User {user.username} updated successfully!')
+        return redirect('fleet:ambulance_mis_manage_users')
+    
+    context = {
+        'edit_user': user,
+        'profile': user_profile,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_edit_user.html', context)
+
+
+@login_required
+def ambulance_mis_manage_drivers(request):
+    """Manage ambulance drivers."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get all drivers (users with is_dedicated_driver=True in ambulance module)
+    drivers = User.objects.filter(
+        profile__is_dedicated_driver=True,
+        profile__module__in=['ambulance', 'both']
+    ).select_related('profile').order_by('first_name', 'last_name', 'username')
+    
+    context = {
+        'drivers': drivers,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_manage_drivers.html', context)
+
+
+@login_required
+def ambulance_mis_add_driver(request):
+    """Add a new ambulance driver."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        
+        try:
+            # Auto-generate a unique username since drivers do not log in
+            base = f"amb_driver_{first_name}_{last_name}".strip("_").lower()
+            base = re.sub(r"[^a-z0-9]+", "_", base) or "amb_driver"
+            username = base
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                counter += 1
+                username = f"{base}_{counter}"
+
+            # Create user with an unusable password
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=None,
+                first_name=first_name,
+                last_name=last_name
+            )
+            
+            # Create profile as driver
+            Profile.objects.create(
+                user=user,
+                role='driver',
+                module='ambulance',
+                subsidiary='nectacare',
+                is_dedicated_driver=True
+            )
+            
+            messages.success(request, f'Driver {username} created successfully!')
+            return redirect('fleet:ambulance_mis_manage_drivers')
+        except Exception as e:
+            messages.error(request, f'Error creating driver: {str(e)}')
+    
+    context = {
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_add_driver.html', context)
+
+
+@login_required
+def ambulance_mis_view_logs(request):
+    """View system logs for ambulance module."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_mis':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get recent ambulance-related activities
+    recent_ambulances = Ambulance.objects.all().order_by('-created_at')[:20]
+    recent_usage = AmbulanceUsageRecord.objects.all().select_related('ambulance', 'driver').order_by('-usage_date')[:20]
+    recent_service = AmbulanceServiceRecord.objects.all().select_related('ambulance').order_by('-service_date')[:20]
+    recent_users = User.objects.filter(
+        profile__module__in=['ambulance', 'both']
+    ).select_related('profile').order_by('-date_joined')[:20]
+    
+    context = {
+        'recent_ambulances': recent_ambulances,
+        'recent_usage': recent_usage,
+        'recent_service': recent_service,
+        'recent_users': recent_users,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/mis_view_logs.html', context)
+
+
+@login_required
+def ambulance_handover_checklist(request):
+    """View active ambulance trips and submit handover checklists."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    # Get active trips (no end_mileage yet)
+    active_trips = AmbulanceUsageRecord.objects.filter(
+        end_mileage__isnull=True
+    ).select_related('ambulance', 'driver').order_by('-created_at')
+    
+    # Get trips with handover status
+    trips_with_handovers = []
+    for trip in active_trips:
+        has_handover = hasattr(trip, 'handover')
+        handover_status = trip.handover.approval_status if has_handover else None
+        
+        trips_with_handovers.append({
+            'trip': trip,
+            'has_handover': has_handover,
+            'handover_status': handover_status,
+            'can_submit': not has_handover or handover_status == 'rejected',
+        })
+
+    previous_handovers = AmbulanceHandoverChecklist.objects.select_related(
+        'ambulance',
+        'driver',
+        'usage_record'
+    ).order_by('-submitted_at')
+    
+    context = {
+        'trips_with_handovers': trips_with_handovers,
+        'previous_handovers': previous_handovers,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/handover_checklist.html', context)
+
+
+@login_required
+def ambulance_handover_detail(request, trip_id):
+    """Submit handover checklist for a specific trip."""
+    try:
+        profile = request.user.profile
+        if profile.role != 'ambulance_admin':
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    trip = get_object_or_404(AmbulanceUsageRecord, id=trip_id)
+    
+    if request.method == 'POST':
+        try:
+            return_mileage = request.POST.get('return_mileage', '').strip()
+            fuel_level = request.POST.get('fuel_level', '').strip()
+
+            # Validate return_mileage
+            if not return_mileage:
+                messages.error(request, 'Return mileage is required.')
+                return redirect('fleet:ambulance_handover_detail', trip_id=trip.id)
+            
+            try:
+                return_mileage = int(return_mileage)
+                if return_mileage < 0:
+                    messages.error(request, 'Return mileage must be a positive number.')
+                    return redirect('fleet:ambulance_handover_detail', trip_id=trip.id)
+            except (ValueError, TypeError):
+                messages.error(request, 'Return mileage must be a valid number.')
+                return redirect('fleet:ambulance_handover_detail', trip_id=trip.id)
+
+            # Validate fuel_level
+            if not fuel_level:
+                messages.error(request, 'Fuel level is required.')
+                return redirect('fleet:ambulance_handover_detail', trip_id=trip.id)
+
+            # Create or update handover checklist
+            handover, created = AmbulanceHandoverChecklist.objects.get_or_create(
+                usage_record=trip,
+                defaults={
+                    'ambulance': trip.ambulance,
+                    'driver': trip.driver,
+                    'return_mileage': return_mileage,
+                    'fuel_level': fuel_level,
+                }
+            )
+            
+            # Update fields (in case record already exists)
+            handover.return_mileage = return_mileage
+            handover.fuel_level = fuel_level
+            handover.condition_notes = request.POST.get('condition_notes', '')
+            
+            # Vehicle checklist
+            handover.alarm_system_functional = request.POST.get('alarm_system_functional')
+            handover.alarm_system_comments = request.POST.get('alarm_system_comments', '')
+            handover.lock_nuts_spanner = request.POST.get('lock_nuts_spanner')
+            handover.lock_nuts_spanner_comments = request.POST.get('lock_nuts_spanner_comments', '')
+            handover.spare_wheel_hatchet = request.POST.get('spare_wheel_hatchet')
+            handover.spare_wheel_hatchet_comments = request.POST.get('spare_wheel_hatchet_comments', '')
+            handover.seat_belts_functioning = request.POST.get('seat_belts_functioning')
+            handover.seat_belts_comments = request.POST.get('seat_belts_comments', '')
+            handover.hand_brake_functioning = request.POST.get('hand_brake_functioning')
+            handover.hand_brake_comments = request.POST.get('hand_brake_comments', '')
+            handover.view_mirrors_functioning = request.POST.get('view_mirrors_functioning')
+            handover.view_mirrors_comments = request.POST.get('view_mirrors_comments', '')
+            handover.vehicle_insurance_disk = request.POST.get('vehicle_insurance_disk')
+            handover.vehicle_insurance_comments = request.POST.get('vehicle_insurance_comments', '')
+            handover.aa_zimbabwe_card = request.POST.get('aa_zimbabwe_card')
+            handover.aa_zimbabwe_comments = request.POST.get('aa_zimbabwe_comments', '')
+            handover.vehicle_licence_disk = request.POST.get('vehicle_licence_disk')
+            handover.vehicle_licence_comments = request.POST.get('vehicle_licence_comments', '')
+            handover.lights_sirens_functional = request.POST.get('lights_sirens_functional')
+            handover.lights_sirens_comments = request.POST.get('lights_sirens_comments', '')
+            handover.brake_lights_functioning = request.POST.get('brake_lights_functioning')
+            handover.brake_lights_comments = request.POST.get('brake_lights_comments', '')
+            handover.indicators_functioning = request.POST.get('indicators_functioning')
+            handover.indicators_comments = request.POST.get('indicators_comments', '')
+            handover.park_lights_functioning = request.POST.get('park_lights_functioning')
+            handover.park_lights_comments = request.POST.get('park_lights_comments', '')
+            handover.communication_radio = request.POST.get('communication_radio')
+            handover.communication_radio_comments = request.POST.get('communication_radio_comments', '')
+            handover.spare_wheel = request.POST.get('spare_wheel')
+            handover.spare_wheel_comments = request.POST.get('spare_wheel_comments', '')
+            handover.jack_tools = request.POST.get('jack_tools')
+            handover.jack_tools_comments = request.POST.get('jack_tools_comments', '')
+            handover.wheel_spanner = request.POST.get('wheel_spanner')
+            handover.wheel_spanner_comments = request.POST.get('wheel_spanner_comments', '')
+            handover.tool_box = request.POST.get('tool_box')
+            handover.tool_box_comments = request.POST.get('tool_box_comments', '')
+            handover.wheel_covers = request.POST.get('wheel_covers')
+            handover.wheel_covers_comments = request.POST.get('wheel_covers_comments', '')
+            handover.seat_covers = request.POST.get('seat_covers')
+            handover.seat_covers_comments = request.POST.get('seat_covers_comments', '')
+            handover.fire_extinguisher = request.POST.get('fire_extinguisher')
+            handover.fire_extinguisher_comments = request.POST.get('fire_extinguisher_comments', '')
+            handover.reflectors_installed = request.POST.get('reflectors_installed')
+            handover.reflectors_comments = request.POST.get('reflectors_comments', '')
+            handover.car_radio = request.POST.get('car_radio')
+            handover.car_radio_comments = request.POST.get('car_radio_comments', '')
+            handover.floor_mats = request.POST.get('floor_mats')
+            handover.floor_mats_comments = request.POST.get('floor_mats_comments', '')
+            
+            # Cleanliness
+            handover.interior_cleanliness = request.POST.get('interior_cleanliness')
+            handover.interior_cleanliness_comments = request.POST.get('interior_cleanliness_comments', '')
+            handover.sanitization_completed = request.POST.get('sanitization_completed')
+            handover.sanitization_comments = request.POST.get('sanitization_comments', '')
+            
+            # Damages
+            handover.damages = request.POST.get('damages', '')
+            handover.scratches_dents = request.POST.get('scratches_dents', '')
+            handover.additional_comments = request.POST.get('additional_comments', '')
+            
+            # Files
+            if request.FILES.get('checklist_document'):
+                handover.checklist_document = request.FILES['checklist_document']
+            if request.FILES.get('photo1'):
+                handover.photo1 = request.FILES['photo1']
+            if request.FILES.get('photo2'):
+                handover.photo2 = request.FILES['photo2']
+            if request.FILES.get('photo3'):
+                handover.photo3 = request.FILES['photo3']
+            
+            # Reset approval status if resubmitting
+            if not created:
+                handover.approval_status = 'pending'
+            
+            handover.save()
+            
+            # Update usage record with closing mileage
+            trip.end_mileage = handover.return_mileage
+            trip.save()
+            
+            # Update ambulance mileage and status
+            trip.ambulance.current_mileage = handover.return_mileage
+            trip.ambulance.status = 'available'
+            trip.ambulance.save()
+            
+            messages.success(request, 'Handover checklist submitted successfully!')
+            return redirect('fleet:ambulance_handover_checklist')
+        except Exception as e:
+            messages.error(request, f'Error submitting handover: {str(e)}')
+    
+    context = {
+        'trip': trip,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/handover_detail.html', context)
+
+
+@login_required
+def ambulance_service_schedule(request):
+    """View and manage ambulance service schedule."""
+    try:
+        profile = request.user.profile
+        if profile.role not in ['ambulance_admin', 'ambulance_mis']:
+            return unauthorized_response(request, 'Access denied.')
+    except Profile.DoesNotExist:
+        return unauthorized_response(request, 'Profile not found.')
+    
+    if request.method == 'POST':
+        # Handle service record submission
+        ambulance_id = request.POST.get('ambulance_id')
+        service_date = request.POST.get('service_date')
+        service_type = request.POST.get('service_type')
+        service_company = request.POST.get('service_company')
+        mileage_at_service = request.POST.get('mileage_at_service')
+        cost = request.POST.get('cost')
+        description = request.POST.get('description')
+        next_service_due = request.POST.get('next_service_due')
+        invoice_number = request.POST.get('invoice_number')
+        
+        try:
+            ambulance = Ambulance.objects.get(id=ambulance_id)
+            
+            service_record = AmbulanceServiceRecord.objects.create(
+                ambulance=ambulance,
+                service_date=service_date,
+                service_type=service_type,
+                service_company=service_company,
+                mileage_at_service=mileage_at_service,
+                cost=cost if cost else None,
+                description=description,
+                next_service_due=next_service_due if next_service_due else None,
+                invoice_number=invoice_number,
+                performed_by=request.user
+            )
+            
+            # Handle receipt upload
+            if request.FILES.get('receipt'):
+                service_record.receipt = request.FILES['receipt']
+                service_record.save()
+            
+            messages.success(request, f'Service record added successfully for {ambulance.reg_number}!')
+            return redirect('fleet:ambulance_service_schedule')
+        except Exception as e:
+            messages.error(request, f'Error adding service record: {str(e)}')
+    
+    # Get all ambulances with their service status
+    ambulances = Ambulance.objects.all().order_by('reg_number')
+    
+    # Get all service records
+    service_records = AmbulanceServiceRecord.objects.all().select_related('ambulance', 'performed_by').order_by('-service_date')
+    
+    # Calculate service due status for each ambulance
+    ambulances_with_service = []
+    for ambulance in ambulances:
+        latest_service = ambulance.service_records.first()
+        km_to_service = ambulance.km_to_service
+        is_overdue = ambulance.is_service_due
+        
+        ambulances_with_service.append({
+            'ambulance': ambulance,
+            'latest_service': latest_service,
+            'km_to_service': km_to_service,
+            'is_overdue': is_overdue,
+        })
+    
+    context = {
+        'ambulances': ambulances,
+        'ambulances_with_service': ambulances_with_service,
+        'service_records': service_records[:50],  # Latest 50 records
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    
+    return render(request, 'ambulance/service_schedule.html', context)

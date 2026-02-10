@@ -1,0 +1,672 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-secondary: #155a94;
+  }
+
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .form-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+
+  .trip-info-card {
+    background: #f0f9ff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 32px;
+    border-left: 4px solid var(--ambulance-primary);
+  }
+
+  .section-header {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 32px 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .fuel-selector {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .fuel-option {
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .fuel-option input[type="radio"] {
+    display: none;
+  }
+
+  .fuel-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .fuel-option input:checked + label {
+    background: #dbeafe;
+    border-color: var(--ambulance-primary);
+  }
+
+  .fuel-bar {
+    width: 40px;
+    height: 60px;
+    background: #e5e7eb;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .fuel-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--fuel-height, 100%);
+    background: linear-gradient(to top, #10b981, #34d399);
+  }
+
+  .fuel-text {
+    font-weight: 600;
+    font-size: 12px;
+    color: #374151;
+  }
+
+  .checklist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .checklist-item {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .checklist-item-label {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .radio-option input {
+    width: auto;
+  }
+
+  .comments-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .btn-submit {
+    background: var(--ambulance-primary);
+    color: white;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  .btn-submit:hover {
+    background: var(--ambulance-secondary);
+  }
+
+  @media (max-width: 768px) {
+    .checklist-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="dashboard-layout">
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        Submit Handover Checklist
+      </h1>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_manage_fleet' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-ambulance"></i></span>
+            <span class="nav-text">Manage Fleet</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_add' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus-circle"></i></span>
+            <span class="nav-text">Add Ambulance</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_record_usage' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Ambulance Assignment</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-wrench"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_view_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Ambulance Handover Checklist</h1>
+        <p>Complete the checklist for {{ trip.ambulance.reg_number }}</p>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" style="padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; background: {% if message.tags == 'success' %}#d1fae5{% else %}#fee2e2{% endif %}; color: {% if message.tags == 'success' %}#065f46{% else %}#991b1b{% endif %};">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="form-container">
+        <div class="trip-info-card">
+          <h3 style="font-weight: 700; margin-bottom: 12px;">Trip Information</h3>
+          <p><strong>Ambulance:</strong> {{ trip.ambulance.reg_number }} - {{ trip.ambulance.model }}</p>
+          <p><strong>Driver:</strong> {{ trip.driver_name }}</p>
+          <p><strong>Deployed:</strong> {{ trip.date|date:"M d, Y" }}</p>
+          <p><strong>Start Mileage:</strong> {{ trip.start_mileage }} km</p>
+          <p><strong>Purpose:</strong> {{ trip.purpose }}</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <!-- Basic Return Info -->
+          <div class="form-group">
+            <label for="return_mileage"><i class="fas fa-tachometer-alt"></i> Return Mileage (km) *</label>
+            <input type="number" id="return_mileage" name="return_mileage" required placeholder="Closing mileage">
+          </div>
+
+          <div class="form-group">
+            <label><i class="fas fa-gas-pump"></i> Fuel Level *</label>
+            <div class="fuel-selector">
+              <div class="fuel-option">
+                <input type="radio" id="fuel-empty" name="fuel_level" value="Empty" required>
+                <label for="fuel-empty">
+                  <div class="fuel-bar" style="--fuel-height: 10%;"></div>
+                  <span class="fuel-text">Empty</span>
+                </label>
+              </div>
+              <div class="fuel-option">
+                <input type="radio" id="fuel-quarter" name="fuel_level" value="1/4">
+                <label for="fuel-quarter">
+                  <div class="fuel-bar" style="--fuel-height: 25%;"></div>
+                  <span class="fuel-text">1/4</span>
+                </label>
+              </div>
+              <div class="fuel-option">
+                <input type="radio" id="fuel-half" name="fuel_level" value="1/2">
+                <label for="fuel-half">
+                  <div class="fuel-bar" style="--fuel-height: 50%;"></div>
+                  <span class="fuel-text">1/2</span>
+                </label>
+              </div>
+              <div class="fuel-option">
+                <input type="radio" id="fuel-three-quarter" name="fuel_level" value="3/4">
+                <label for="fuel-three-quarter">
+                  <div class="fuel-bar" style="--fuel-height: 75%;"></div>
+                  <span class="fuel-text">3/4</span>
+                </label>
+              </div>
+              <div class="fuel-option">
+                <input type="radio" id="fuel-full" name="fuel_level" value="Full">
+                <label for="fuel-full">
+                  <div class="fuel-bar" style="--fuel-height: 100%;"></div>
+                  <span class="fuel-text">Full</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inspection Checklist -->
+          <h2 class="section-header"><i class="fas fa-clipboard-check"></i> Inspection Checklist</h2>
+          <div class="checklist-grid">
+            <div class="checklist-item">
+              <span class="checklist-item-label">Alarm System Functional</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="alarm_system_functional" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="alarm_system_functional" value="No"> No</label>
+              </div>
+              <input type="text" name="alarm_system_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Lock Nuts & Spanner</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="lock_nuts_spanner" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="lock_nuts_spanner" value="No"> No</label>
+              </div>
+              <input type="text" name="lock_nuts_spanner_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Spare Wheel Hatchet</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="spare_wheel_hatchet" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="spare_wheel_hatchet" value="No"> No</label>
+              </div>
+              <input type="text" name="spare_wheel_hatchet_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Seat Belts Functioning</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="seat_belts_functioning" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="seat_belts_functioning" value="No"> No</label>
+              </div>
+              <input type="text" name="seat_belts_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Hand Brake Functioning</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="hand_brake_functioning" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="hand_brake_functioning" value="No"> No</label>
+              </div>
+              <input type="text" name="hand_brake_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">View Mirrors Functioning</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="view_mirrors_functioning" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="view_mirrors_functioning" value="No"> No</label>
+              </div>
+              <input type="text" name="view_mirrors_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Vehicle Insurance Disk</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="vehicle_insurance_disk" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="vehicle_insurance_disk" value="No"> No</label>
+              </div>
+              <input type="text" name="vehicle_insurance_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">AA Zimbabwe Card</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="aa_zimbabwe_card" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="aa_zimbabwe_card" value="No"> No</label>
+              </div>
+              <input type="text" name="aa_zimbabwe_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Vehicle Licence Disk</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="vehicle_licence_disk" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="vehicle_licence_disk" value="No"> No</label>
+              </div>
+              <input type="text" name="vehicle_licence_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Brake Lights Functioning</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="brake_lights_functioning" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="brake_lights_functioning" value="No"> No</label>
+              </div>
+              <input type="text" name="brake_lights_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Indicators Functioning</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="indicators_functioning" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="indicators_functioning" value="No"> No</label>
+              </div>
+              <input type="text" name="indicators_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Park Lights Functioning</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="park_lights_functioning" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="park_lights_functioning" value="No"> No</label>
+              </div>
+              <input type="text" name="park_lights_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Spare Wheel</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="spare_wheel" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="spare_wheel" value="No"> No</label>
+              </div>
+              <input type="text" name="spare_wheel_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Jack</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="jack_tools" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="jack_tools" value="No"> No</label>
+              </div>
+              <input type="text" name="jack_tools_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Wheel Spanner</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="wheel_spanner" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="wheel_spanner" value="No"> No</label>
+              </div>
+              <input type="text" name="wheel_spanner_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Tool Box</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="tool_box" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="tool_box" value="No"> No</label>
+              </div>
+              <input type="text" name="tool_box_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Wheel Covers</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="wheel_covers" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="wheel_covers" value="No"> No</label>
+              </div>
+              <input type="text" name="wheel_covers_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Seat Covers</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="seat_covers" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="seat_covers" value="No"> No</label>
+              </div>
+              <input type="text" name="seat_covers_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Reflectors Installed</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="reflectors_installed" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="reflectors_installed" value="No"> No</label>
+              </div>
+              <input type="text" name="reflectors_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Car Radio</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="car_radio" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="car_radio" value="No"> No</label>
+              </div>
+              <input type="text" name="car_radio_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Floor Mats</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="floor_mats" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="floor_mats" value="No"> No</label>
+              </div>
+              <input type="text" name="floor_mats_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Lights & Sirens</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="lights_sirens_functional" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="lights_sirens_functional" value="No"> No</label>
+              </div>
+              <input type="text" name="lights_sirens_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Fire Extinguisher</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="fire_extinguisher" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="fire_extinguisher" value="No"> No</label>
+              </div>
+              <input type="text" name="fire_extinguisher_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Communication Radio</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="communication_radio" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="communication_radio" value="No"> No</label>
+              </div>
+              <input type="text" name="communication_radio_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+          </div>
+
+          <!-- Cleanliness -->
+          <h2 class="section-header"><i class="fas fa-broom"></i> Cleanliness</h2>
+          <div class="checklist-grid">
+            <div class="checklist-item">
+              <span class="checklist-item-label">Interior Cleanliness</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="interior_cleanliness" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="interior_cleanliness" value="No"> No</label>
+              </div>
+              <input type="text" name="interior_cleanliness_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+
+            <div class="checklist-item">
+              <span class="checklist-item-label">Sanitization Completed</span>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="sanitization_completed" value="Yes"> Yes</label>
+                <label class="radio-option"><input type="radio" name="sanitization_completed" value="No"> No</label>
+              </div>
+              <input type="text" name="sanitization_comments" class="comments-input" placeholder="Comments (optional)">
+            </div>
+          </div>
+
+          <!-- Damages & Notes -->
+          <h2 class="section-header"><i class="fas fa-exclamation-triangle"></i> Damages & Notes</h2>
+          <div class="form-group">
+            <label for="damages">Damages (if any)</label>
+            <textarea id="damages" name="damages" rows="3" placeholder="Describe any damages observed"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="additional_comments">Additional Comments</label>
+            <textarea id="additional_comments" name="additional_comments" rows="3" placeholder="Any other observations or notes"></textarea>
+          </div>
+
+          <!-- Photo Uploads -->
+          <h2 class="section-header"><i class="fas fa-camera"></i> Photos (Optional)</h2>
+          <div class="form-group">
+            <label for="photo1">Photo 1</label>
+            <input type="file" id="photo1" name="photo1" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label for="photo2">Photo 2</label>
+            <input type="file" id="photo2" name="photo2" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label for="photo3">Photo 3</label>
+            <input type="file" id="photo3" name="photo3" accept="image/*">
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 32px;">
+            <button type="submit" class="btn-submit">
+              <i class="fas fa-check-circle"></i> Submit Handover Checklist
+            </button>
+            <a href="{% url 'fleet:ambulance_handover_checklist' %}" style="padding: 14px 32px; border: 2px solid #d1d5db; border-radius: 8px; text-decoration: none; color: #6b7280; font-weight: 600;">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

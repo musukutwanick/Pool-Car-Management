@@ -9,7 +9,6 @@
     --ambulance-dark: #000;
   }
 
-  /* Sidebar color overrides for ambulance theme */
   .nav-item.active .nav-link {
     background-color: #dbeafe !important;
     color: #000000 !important;
@@ -94,7 +93,7 @@
       </div>
       <h1 class="header-title">
         <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
-        Add Ambulance User
+        Add Ambulance Driver
       </h1>
     </div>
 
@@ -133,7 +132,7 @@
             <span class="nav-text">Manage Users</span>
           </a>
         </li>
-        <li class="nav-item active">
+        <li class="nav-item">
           <a href="{% url 'fleet:ambulance_mis_add_user' %}" class="nav-link">
             <span class="nav-icon"><i class="fas fa-user-plus"></i></span>
             <span class="nav-text">Add User</span>
@@ -145,7 +144,7 @@
             <span class="nav-text">Manage Drivers</span>
           </a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item active">
           <a href="{% url 'fleet:ambulance_mis_add_driver' %}" class="nav-link">
             <span class="nav-icon"><i class="fas fa-user-md"></i></span>
             <span class="nav-text">Add Driver</span>
@@ -164,22 +163,25 @@
   <div class="main-content">
     <main class="dashboard-content">
       <div class="page-header">
-        <h1>Add New User</h1>
-        <p>Create a new user for Ambulance Manager</p>
+        <h1>Add New Driver</h1>
+        <p>Create a new dedicated ambulance driver</p>
       </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" style="padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; background: {% if message.tags == 'success' %}#d1fae5{% else %}#fee2e2{% endif %}; color: {% if message.tags == 'success' %}#065f46{% else %}#991b1b{% endif %};">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
 
       <div class="form-container">
         <form method="post">
           {% csrf_token %}
           
           <div class="form-group">
-            <label for="username">Username *</label>
-            <input type="text" name="username" id="username" required>
-          </div>
-
-          <div class="form-group">
-            <label for="email">Email *</label>
-            <input type="email" name="email" id="email" required>
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email">
           </div>
 
           <div class="form-group">
@@ -192,34 +194,15 @@
             <input type="text" name="last_name" id="last_name" required>
           </div>
 
-          <div class="form-group">
-            <label for="password">Password *</label>
-            <input type="password" name="password" id="password" required>
-          </div>
-
-          <div class="form-group">
-            <label for="role">Role *</label>
-            <select name="role" id="role" required>
-              <option value="">Select Role</option>
-              <option value="ambulance_admin">Ambulance Admin</option>
-              <option value="ambulance_mis">Ambulance MIS Admin</option>
-              <option value="nectacare_head">Nectacare Head</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="module">Module Access *</label>
-            <select name="module" id="module" required>
-              <option value="ambulance">Ambulance Only</option>
-              <option value="both">Both Modules (Pool Car & Ambulance)</option>
-            </select>
-          </div>
+          <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+            Drivers do not log in. Username and password are created automatically.
+          </p>
 
           <div style="margin-top: 32px; display: flex; gap: 12px;">
             <button type="submit" class="btn-submit">
-              <i class="fas fa-save"></i> Create User
+              <i class="fas fa-save"></i> Create Driver
             </button>
-            <a href="{% url 'fleet:ambulance_mis_manage_users' %}" style="padding: 12px 32px; border: 2px solid #d1d5db; border-radius: 8px; text-decoration: none; color: #6b7280; font-weight: 600;">
+            <a href="{% url 'fleet:ambulance_mis_manage_drivers' %}" style="padding: 12px 32px; border: 2px solid #d1d5db; border-radius: 8px; text-decoration: none; color: #6b7280; font-weight: 600;">
               Cancel
             </a>
           </div>

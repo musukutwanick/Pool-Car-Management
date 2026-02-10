@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-dark: #000;
+  }
+
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+    color: #000000 !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .logs-section {
+    margin-top: 24px;
+  }
+
+  .log-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    margin-bottom: 24px;
+  }
+
+  .log-card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1f2937;
+  }
+
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .log-table th {
+    text-align: left;
+    padding: 10px;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 2px solid #f3f4f6;
+    font-size: 13px;
+  }
+
+  .log-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 13px;
+  }
+
+  .tab-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f3f4f6;
+  }
+
+  .tab-btn {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    color: var(--ambulance-primary);
+    border-bottom-color: var(--ambulance-primary);
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        System Activity Logs
+      </h1>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_manage_users' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-users"></i></span>
+            <span class="nav-text">Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_add_user' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-plus"></i></span>
+            <span class="nav-text">Add User</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_manage_drivers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+            <span class="nav-text">Manage Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_add_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-md"></i></span>
+            <span class="nav-text">Add Driver</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_mis_view_logs' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">System Logs</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>System Activity Logs</h1>
+        <p>Track recent ambulance fleet activities and user actions</p>
+      </div>
+
+      <div class="logs-section">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="showTab('users')">
+            <i class="fas fa-users"></i> User Activity
+          </button>
+          <button class="tab-btn" onclick="showTab('ambulances')">
+            <i class="fas fa-ambulance"></i> Ambulances
+          </button>
+          <button class="tab-btn" onclick="showTab('usage')">
+            <i class="fas fa-route"></i> Usage Records
+          </button>
+          <button class="tab-btn" onclick="showTab('service')">
+            <i class="fas fa-wrench"></i> Service Records
+          </button>
+        </div>
+
+        <!-- User Activity Tab -->
+        <div id="users-tab" class="tab-content active">
+          <div class="log-card">
+            <h2>Recent User Registrations</h2>
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for user in recent_users %}
+                <tr>
+                  <td style="font-weight: 600;">{{ user.username }}</td>
+                  <td>{{ user.get_full_name|default:"—" }}</td>
+                  <td>{{ user.email|default:"—" }}</td>
+                  <td>{{ user.profile.get_role_display }}</td>
+                  <td>{{ user.date_joined|date:"M d, Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 32px; color: #6b7280;">No recent users</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ambulances Tab -->
+        <div id="ambulances-tab" class="tab-content">
+          <div class="log-card">
+            <h2>Recent Ambulance Additions</h2>
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Registration</th>
+                  <th>Make & Model</th>
+                  <th>Status</th>
+                  <th>Home Base</th>
+                  <th>Added On</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ambulance in recent_ambulances %}
+                <tr>
+                  <td style="font-weight: 600;">{{ ambulance.registration_number }}</td>
+                  <td>{{ ambulance.make }} {{ ambulance.model }}</td>
+                  <td>{{ ambulance.get_status_display }}</td>
+                  <td>{{ ambulance.home_base|default:"—" }}</td>
+                  <td>{{ ambulance.created_at|date:"M d, Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 32px; color: #6b7280;">No recent ambulances</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Usage Records Tab -->
+        <div id="usage-tab" class="tab-content">
+          <div class="log-card">
+            <h2>Recent Usage Records</h2>
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Ambulance</th>
+                  <th>Driver</th>
+                  <th>Purpose</th>
+                  <th>Distance</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for usage in recent_usage %}
+                <tr>
+                  <td style="font-weight: 600;">{{ usage.ambulance.registration_number }}</td>
+                  <td>{{ usage.driver.get_full_name|default:usage.driver.username }}</td>
+                  <td>{{ usage.purpose|truncatewords:8 }}</td>
+                  <td>{{ usage.distance_km|default:"—" }} km</td>
+                  <td>{{ usage.usage_date|date:"M d, Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 32px; color: #6b7280;">No recent usage records</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Service Records Tab -->
+        <div id="service-tab" class="tab-content">
+          <div class="log-card">
+            <h2>Recent Service Records</h2>
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Ambulance</th>
+                  <th>Service Type</th>
+                  <th>Cost</th>
+                  <th>Mileage</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for service in recent_service %}
+                <tr>
+                  <td style="font-weight: 600;">{{ service.ambulance.registration_number }}</td>
+                  <td>{{ service.get_service_type_display }}</td>
+                  <td>${{ service.cost|default:"0" }}</td>
+                  <td>{{ service.mileage_at_service|default:"—" }} km</td>
+                  <td>{{ service.service_date|date:"M d, Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 32px; color: #6b7280;">No recent service records</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+function showTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Deactivate all buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected tab
+  document.getElementById(tabName + '-tab').classList.add('active');
+  
+  // Activate selected button
+  event.target.classList.add('active');
+}
+</script>
+{% endblock %}

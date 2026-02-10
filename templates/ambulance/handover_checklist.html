@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --ambulance-primary: #1c75bc;
+    --ambulance-secondary: #155a94;
+    --ambulance-dark: #000;
+  }
+
+  .nav-item.active .nav-link {
+    background-color: #dbeafe !important;
+    color: #000000 !important;
+    border-left-color: #1c75bc !important;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    background-color: #f0f9ff !important;
+    color: #000000 !important;
+  }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-icon i {
+    color: #000 !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(28, 117, 188, 0.2);
+  }
+
+  .nav-item.active .nav-icon i {
+    color: #1c75bc !important;
+  }
+
+  .trips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  .trip-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    border: 1px solid rgba(28, 117, 188, 0.15);
+  }
+
+  .trip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+
+  .trip-title h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+  }
+
+  .trip-title p {
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .status-badge {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-badge.active {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-badge.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-badge.approved {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .trip-details {
+    margin: 16px 0;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+
+  .detail-label {
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  .detail-value {
+    color: #1f2937;
+  }
+
+  .btn-submit-handover {
+    background: var(--ambulance-primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    margin-top: 16px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .btn-submit-handover:hover {
+    background: var(--ambulance-secondary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 64px 32px;
+    color: #6b7280;
+  }
+
+  .empty-state i {
+    font-size: 64px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .handover-history {
+    margin-top: 32px;
+  }
+
+  .handover-history h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 16px;
+  }
+
+  .handover-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+
+  .handover-table thead {
+    background: #f9fafb;
+  }
+
+  .handover-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .handover-table td {
+    padding: 14px 16px;
+    border-top: 1px solid #f3f4f6;
+    font-size: 14px;
+    color: #374151;
+  }
+
+  .handover-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  .file-link {
+    color: #111827;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .file-link:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<div class="dashboard-layout">
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="{% static 'img/nectacare_thumb.png' %}" alt="Nectacare" class="header-logo-img">
+      </div>
+      <h1 class="header-title">
+        <i class="fas fa-ambulance" style="color: var(--ambulance-primary); margin-right: 0.5rem;"></i>
+        Ambulance Handover
+      </h1>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name">{{ user_name }}</span>
+        <div class="profile-dropdown">
+          <div class="user-avatar" onclick="toggleProfileMenu()">{{ user_name|first }}</div>
+          <div class="profile-menu" id="profileMenu">
+            <a href="{% url 'fleet:landing' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-home"></i></span>
+              <span>Module Selection</span>
+            </a>
+            <a href="{% url 'fleet:ambulance_login_page' %}" class="profile-menu-item">
+              <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_admin_dashboard' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-home"></i></span>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_manage_fleet' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-ambulance"></i></span>
+            <span class="nav-text">Manage Fleet</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_add' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-plus-circle"></i></span>
+            <span class="nav-text">Add Ambulance</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_record_usage' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+            <span class="nav-text">Ambulance Assignment</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="{% url 'fleet:ambulance_handover_checklist' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+            <span class="nav-text">Handover Checklist</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_service_schedule' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-wrench"></i></span>
+            <span class="nav-text">Service</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_view_statistics' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+            <span class="nav-text">Statistics</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <main class="dashboard-content">
+      <div class="page-header">
+        <h1>Ambulance Handover</h1>
+        <p>Submit handover checklists for returned ambulances</p>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" style="padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; background: {% if message.tags == 'success' %}#d1fae5{% else %}#fee2e2{% endif %}; color: {% if message.tags == 'success' %}#065f46{% else %}#991b1b{% endif %};">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if trips_with_handovers %}
+      <div class="trips-grid">
+        {% for item in trips_with_handovers %}
+        <div class="trip-card">
+          <div class="trip-header">
+            <div class="trip-title">
+              <h3>{{ item.trip.ambulance.reg_number }}</h3>
+              <p>{{ item.trip.ambulance.model }}</p>
+            </div>
+            <div>
+              {% if item.has_handover %}
+                {% if item.handover_status == 'pending' %}
+                  <span class="status-badge pending">Awaiting Review</span>
+                {% elif item.handover_status == 'approved' %}
+                  <span class="status-badge approved">Approved</span>
+                {% elif item.handover_status == 'rejected' %}
+                  <span class="status-badge" style="background: #fee2e2; color: #991b1b;">Rejected</span>
+                {% endif %}
+              {% else %}
+                <span class="status-badge active">On Call</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="trip-details">
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-user"></i> Driver:</span>
+              <span class="detail-value">{{ item.trip.driver_name }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-calendar-alt"></i> Deployed:</span>
+              <span class="detail-value">{{ item.trip.date|date:"M d, Y" }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-tachometer-alt"></i> Start Mileage:</span>
+              <span class="detail-value">{{ item.trip.start_mileage }} km</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-clipboard-list"></i> Purpose:</span>
+              <span class="detail-value">{{ item.trip.purpose }}</span>
+            </div>
+          </div>
+
+          {% if item.can_submit %}
+            <a href="{% url 'fleet:ambulance_handover_detail' item.trip.id %}" class="btn-submit-handover">
+              <i class="fas fa-clipboard-check"></i> Submit Handover Checklist
+            </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-clipboard-list"></i>
+        <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">No Active Trips</h3>
+        <p>All ambulances are available. No pending handovers.</p>
+      </div>
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.profile-dropdown');
+  const menu = document.getElementById('profileMenu');
+  if (!dropdown.contains(event.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

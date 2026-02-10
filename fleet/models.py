@@ -219,7 +219,13 @@ class CarRequest(models.Model):
 
 
 class HandoverChecklist(models.Model):
-    request = models.OneToOneField(CarRequest, on_delete=models.CASCADE, related_name='handover')
+    CHECKLIST_TYPE_CHOICES = [
+        ('pickup', 'Pickup Inspection'),
+        ('return', 'Return Inspection'),
+    ]
+    
+    request = models.ForeignKey(CarRequest, on_delete=models.CASCADE, related_name='handovers')
+    checklist_type = models.CharField(max_length=10, choices=CHECKLIST_TYPE_CHOICES, default='return', db_index=True, help_text='Whether this is a pickup or return checklist')
     
     # Return information
     return_mileage = models.PositiveIntegerField(null=True, blank=True)
@@ -324,8 +330,15 @@ class HandoverChecklist(models.Model):
     approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
     admin_notes = models.TextField(blank=True)
 
+    class Meta:
+        unique_together = [['request', 'checklist_type']]
+        indexes = [
+            models.Index(fields=['checklist_type', 'approval_status']),
+            models.Index(fields=['request', 'checklist_type']),
+        ]
+
     def __str__(self):
-        return f"Handover for request {self.request.id}"
+        return f"{self.get_checklist_type_display()} for request {self.request.id}"
 
 
 class ServiceRecord(models.Model):
@@ -553,3 +566,148 @@ class AmbulanceRequest(models.Model):
 
     def __str__(self):
         return f"Ambulance Request {self.id} by {self.requester.username} ({self.status})"
+
+
+class AmbulanceHandoverChecklist(models.Model):
+    """Handover checklist for returning ambulances after trips."""
+    usage_record = models.OneToOneField(AmbulanceUsageRecord, on_delete=models.CASCADE, related_name='handover')
+    ambulance = models.ForeignKey(Ambulance, on_delete=models.CASCADE, related_name='handovers')
+    driver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='ambulance_handovers')
+    
+    # Return information
+    return_mileage = models.PositiveIntegerField()
+    fuel_level = models.CharField(max_length=64)
+    condition_notes = models.TextField(blank=True)
+    
+    # Medical equipment checklist
+    stretcher_condition = models.CharField(max_length=10, blank=True, null=True)
+    stretcher_comments = models.TextField(blank=True)
+    
+    oxygen_cylinders = models.CharField(max_length=10, blank=True, null=True)
+    oxygen_cylinders_comments = models.TextField(blank=True)
+    
+    first_aid_kit = models.CharField(max_length=10, blank=True, null=True)
+    first_aid_kit_comments = models.TextField(blank=True)
+    
+    defibrillator = models.CharField(max_length=10, blank=True, null=True)
+    defibrillator_comments = models.TextField(blank=True)
+    
+    spinal_board = models.CharField(max_length=10, blank=True, null=True)
+    spinal_board_comments = models.TextField(blank=True)
+    
+    medical_supplies = models.CharField(max_length=10, blank=True, null=True)
+    medical_supplies_comments = models.TextField(blank=True)
+    
+    # Vehicle checklist items
+    alarm_system_functional = models.CharField(max_length=10, blank=True, null=True)
+    alarm_system_comments = models.TextField(blank=True)
+
+    lock_nuts_spanner = models.CharField(max_length=10, blank=True, null=True)
+    lock_nuts_spanner_comments = models.TextField(blank=True)
+
+    spare_wheel_hatchet = models.CharField(max_length=10, blank=True, null=True)
+    spare_wheel_hatchet_comments = models.TextField(blank=True)
+
+    seat_belts_functioning = models.CharField(max_length=10, blank=True, null=True)
+    seat_belts_comments = models.TextField(blank=True)
+
+    hand_brake_functioning = models.CharField(max_length=10, blank=True, null=True)
+    hand_brake_comments = models.TextField(blank=True)
+
+    view_mirrors_functioning = models.CharField(max_length=10, blank=True, null=True)
+    view_mirrors_comments = models.TextField(blank=True)
+
+    vehicle_insurance_disk = models.CharField(max_length=10, blank=True, null=True)
+    vehicle_insurance_comments = models.TextField(blank=True)
+
+    aa_zimbabwe_card = models.CharField(max_length=10, blank=True, null=True)
+    aa_zimbabwe_comments = models.TextField(blank=True)
+
+    vehicle_licence_disk = models.CharField(max_length=10, blank=True, null=True)
+    vehicle_licence_comments = models.TextField(blank=True)
+
+    lights_sirens_functional = models.CharField(max_length=10, blank=True, null=True)
+    lights_sirens_comments = models.TextField(blank=True)
+    
+    brake_lights_functioning = models.CharField(max_length=10, blank=True, null=True)
+    brake_lights_comments = models.TextField(blank=True)
+    
+    indicators_functioning = models.CharField(max_length=10, blank=True, null=True)
+    indicators_comments = models.TextField(blank=True)
+
+    park_lights_functioning = models.CharField(max_length=10, blank=True, null=True)
+    park_lights_comments = models.TextField(blank=True)
+    
+    communication_radio = models.CharField(max_length=10, blank=True, null=True)
+    communication_radio_comments = models.TextField(blank=True)
+    
+    spare_wheel = models.CharField(max_length=10, blank=True, null=True)
+    spare_wheel_comments = models.TextField(blank=True)
+    
+    jack_tools = models.CharField(max_length=10, blank=True, null=True)
+    jack_tools_comments = models.TextField(blank=True)
+
+    wheel_spanner = models.CharField(max_length=10, blank=True, null=True)
+    wheel_spanner_comments = models.TextField(blank=True)
+
+    tool_box = models.CharField(max_length=10, blank=True, null=True)
+    tool_box_comments = models.TextField(blank=True)
+
+    wheel_covers = models.CharField(max_length=10, blank=True, null=True)
+    wheel_covers_comments = models.TextField(blank=True)
+
+    seat_covers = models.CharField(max_length=10, blank=True, null=True)
+    seat_covers_comments = models.TextField(blank=True)
+    
+    fire_extinguisher = models.CharField(max_length=10, blank=True, null=True)
+    fire_extinguisher_comments = models.TextField(blank=True)
+    
+    reflectors_installed = models.CharField(max_length=10, blank=True, null=True)
+    reflectors_comments = models.TextField(blank=True)
+
+    car_radio = models.CharField(max_length=10, blank=True, null=True)
+    car_radio_comments = models.TextField(blank=True)
+
+    floor_mats = models.CharField(max_length=10, blank=True, null=True)
+    floor_mats_comments = models.TextField(blank=True)
+    
+    # Cleanliness and sanitization
+    interior_cleanliness = models.CharField(max_length=10, blank=True, null=True)
+    interior_cleanliness_comments = models.TextField(blank=True)
+    
+    sanitization_completed = models.CharField(max_length=10, blank=True, null=True)
+    sanitization_comments = models.TextField(blank=True)
+    
+    # Damages and scratches
+    damages = models.TextField(blank=True)
+    scratches_dents = models.TextField(blank=True)
+    
+    # Additional comments
+    additional_comments = models.TextField(blank=True)
+    
+    # Attachments
+    checklist_document = models.FileField(upload_to='ambulance_handover_checklists/', null=True, blank=True)
+    photo1 = models.ImageField(upload_to='ambulance_handover_photos/', null=True, blank=True)
+    photo2 = models.ImageField(upload_to='ambulance_handover_photos/', null=True, blank=True)
+    photo3 = models.ImageField(upload_to='ambulance_handover_photos/', null=True, blank=True)
+    
+    # Processing timestamps
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='reviewed_ambulance_handovers')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Admin review
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected - Issues Found'),
+        ('needs_review', 'Needs Additional Review'),
+    ]
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
+    admin_notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Handover for {self.ambulance.registration_number} - {self.submitted_at.strftime('%Y-%m-%d')}"

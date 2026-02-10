@@ -146,6 +146,37 @@
                   </div>
                 </div>
 
+                {% if item.previous_handover %}
+                <div class="previous-handover">
+                  <div class="previous-handover-header">
+                    <i class="fas fa-paperclip"></i>
+                    <span>Previous Handover Attachments</span>
+                  </div>
+                  <div class="previous-handover-meta">
+                    <span>Submitted by {{ item.previous_handover.request.requester.get_full_name|default:item.previous_handover.request.requester.username }}</span>
+                    <span>on {{ item.previous_handover.submitted_at|date:"M d, Y" }}</span>
+                  </div>
+                  {% if item.previous_handover.checklist_document or item.previous_handover.additional_photo1 or item.previous_handover.additional_photo2 or item.previous_handover.additional_photo3 %}
+                  <div class="previous-handover-attachments">
+                    {% if item.previous_handover.checklist_document %}
+                      <a class="attachment-link" href="{{ item.previous_handover.checklist_document.url }}" target="_blank" rel="noopener">Checklist Document</a>
+                    {% endif %}
+                    {% if item.previous_handover.additional_photo1 %}
+                      <a class="attachment-link" href="{{ item.previous_handover.additional_photo1.url }}" target="_blank" rel="noopener">Photo 1</a>
+                    {% endif %}
+                    {% if item.previous_handover.additional_photo2 %}
+                      <a class="attachment-link" href="{{ item.previous_handover.additional_photo2.url }}" target="_blank" rel="noopener">Photo 2</a>
+                    {% endif %}
+                    {% if item.previous_handover.additional_photo3 %}
+                      <a class="attachment-link" href="{{ item.previous_handover.additional_photo3.url }}" target="_blank" rel="noopener">Photo 3</a>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <div class="previous-handover-empty">No attachments were submitted for this handover.</div>
+                  {% endif %}
+                </div>
+                {% endif %}
+
                 {% if item.can_submit %}
                 <div class="handover-form-section">
                   {% if item.handover_status == 'rejected' %}
@@ -413,7 +444,6 @@
                 </div>
                 {% endif %}
               </div>
-              </div>
             {% endfor %}
           </div>
         {% else %}
@@ -514,6 +544,63 @@
   padding: 24px;
   border-bottom: 1px solid #f3f4f6;
   background: #f9fafb;
+}
+
+.previous-handover {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fff7ed;
+}
+
+.previous-handover-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.previous-handover-header i {
+  color: #000000;
+}
+
+.previous-handover-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.previous-handover-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fed41f;
+  color: #000000;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.attachment-link:hover {
+  background: #f2c40d;
+}
+
+.previous-handover-empty {
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .detail-row {

@@ -464,8 +464,20 @@ function openRequestModal(btn){
   // Actions
   const actions = document.getElementById('modalActions');
   const requestId = get('data-request-id') || row.getAttribute('data-request-id');
-  // Preserve Close button, rebuild others except the last existing close
-  actions.querySelectorAll('button:not(.req-secondary)').forEach(b=>{ if(!b.classList.contains('req-secondary')) b.remove(); });
+  // Preserve Close button, remove all other actions
+  Array.from(actions.children).forEach(child => {
+    if (!child.classList.contains('req-secondary')) {
+      child.remove();
+    }
+  });
+  // View checklist for assigned requests
+  if (statusRaw === 'assigned') {
+    const checklistLink = document.createElement('a');
+    checklistLink.href = '/employee/handover/' + requestId + '/';
+    checklistLink.className = 'req-primary';
+    checklistLink.textContent = 'View Checklist';
+    actions.prepend(checklistLink);
+  }
   // Insert Edit/Cancel if pending
   if(statusRaw === 'pending'){
     const editLink = document.createElement('a');

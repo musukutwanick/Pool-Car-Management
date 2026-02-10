@@ -80,6 +80,49 @@
     background: #f3f4f6;
     color: #374151;
   }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  .btn-edit {
+    background: #10b981;
+    color: white;
+  }
+
+  .btn-edit:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.2);
+  }
+
+  .btn-reset {
+    background: var(--ambulance-primary);
+    color: white;
+  }
+
+  .btn-reset:hover {
+    background: #155a94;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(28, 117, 188, 0.2);
+  }
 </style>
 
 <div class="dashboard-layout">
@@ -135,6 +178,24 @@
             <span class="nav-text">Add User</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_manage_drivers' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+            <span class="nav-text">Manage Drivers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_add_driver' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-user-md"></i></span>
+            <span class="nav-text">Add Driver</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'fleet:ambulance_mis_view_logs' %}" class="nav-link">
+            <span class="nav-icon"><i class="fas fa-history"></i></span>
+            <span class="nav-text">System Logs</span>
+          </a>
+        </li>
       </ul>
     </div>
   </nav>
@@ -161,6 +222,7 @@
               <th>Role</th>
               <th>Module Access</th>
               <th>Joined</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -172,10 +234,20 @@
               <td><span class="role-badge">{{ user.profile.get_role_display }}</span></td>
               <td><span class="role-badge">{{ user.profile.get_module_display }}</span></td>
               <td>{{ user.date_joined|date:"M d, Y" }}</td>
+              <td>
+                <div class="action-buttons">
+                  <a href="{% url 'fleet:ambulance_mis_edit_user' user.id %}" class="btn-action btn-edit">
+                    <i class="fas fa-edit"></i> Edit
+                  </a>
+                  <a href="{% url 'fleet:ambulance_mis_reset_password' user.id %}" class="btn-action btn-reset">
+                    <i class="fas fa-key"></i> Reset
+                  </a>
+                </div>
+              </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="6" style="text-align: center; padding: 48px; color: #6b7280;">
+              <td colspan="7" style="text-align: center; padding: 48px; color: #6b7280;">
                 <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
                 <p>No users found.</p>
               </td>
